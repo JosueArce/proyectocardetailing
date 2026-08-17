@@ -8,6 +8,7 @@ El prototipo está localizado para Costa Rica: precios, ingresos, gastos y ganan
 
 El acceso administrativo local para evaluar el prototipo es `admin@estudioauto.com` / `admin123`. Las cuentas, contraseñas, vehículos, citas y finanzas se guardan solamente en `localStorage`; esta implementación no ofrece seguridad real y debe sustituirse por autenticación, API y base de datos antes de operar con clientes reales.
 
+
 ## Desarrollo
 
 ```bash
