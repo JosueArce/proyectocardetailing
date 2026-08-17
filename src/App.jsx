@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, CalendarDays, Car, Check, ChevronRight, Clock3, Droplets, Instagram, Mail, Menu, MessageCircle, ShieldCheck, Sparkles, X } from './icons'
 
+
 const services = [
   { icon: Droplets, name: 'Esencial', price: '$49', time: '60–90 min', desc: 'El cuidado preciso para mantener tu auto impecable.', features: ['Lavado exterior premium', 'Aspirado interior', 'Limpieza de cristales', 'Brillo de neumáticos'] },
   { icon: Sparkles, name: 'Signature', price: '$119', time: '2–3 horas', popular: true, desc: 'Una renovación completa, por dentro y por fuera.', features: ['Todo lo del plan Esencial', 'Descontaminado de pintura', 'Limpieza profunda interior', 'Cera premium de 3 meses'] },
