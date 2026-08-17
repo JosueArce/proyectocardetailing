@@ -2,6 +2,8 @@
 
 Landing page responsiva para un negocio de detallado automotriz. Incluye servicios, precios, productos profesionales, reservación sin registro, cuentas de cliente con vehículos e historial, y un panel administrativo para citas, fechas bloqueadas, ingresos y gastos.
 
+El prototipo está localizado para Costa Rica: precios, ingresos, gastos y ganancias se presentan en colones costarricenses (CRC). La historia de marca identifica a Josue Arce, de 29 años, como fundador del proyecto.
+
 ### Accesos de demostración
 
 El acceso administrativo local para evaluar el prototipo es `admin@estudioauto.com` / `admin123`. Las cuentas, contraseñas, vehículos, citas y finanzas se guardan solamente en `localStorage`; esta implementación no ofrece seguridad real y debe sustituirse por autenticación, API y base de datos antes de operar con clientes reales.
