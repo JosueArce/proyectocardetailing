@@ -1,1 +1,80 @@
-# proyectocardetailing
+# Estudio Auto
+
+Landing page responsiva para un negocio de detallado automotriz. Incluye presentación de servicios y precios, galería de resultados, testimonios, reservación de citas y un panel local para administrar solicitudes y contactar a los clientes.
+
+## Desarrollo
+
+```bash
+npm install
+npm run dev
+```
+
+## Validación
+
+```bash
+npm run lint
+npm run build
+npm test
+npm run test:coverage
+```
+
+Las reservaciones se almacenan en `localStorage` para que el prototipo funcione sin un servidor. En producción se recomienda conectar el formulario a una base de datos y proteger el panel administrativo mediante autenticación.
+
+## Google Cloud Run
+
+El [`Dockerfile`](Dockerfile) de la raíz está listo para que Cloud Run construya la aplicación desde el código fuente. Los archivos adicionales de Cloud Build, Nginx y despliegue se encuentran en [`GCP-infra/`](GCP-infra/README.md); la guía incluye despliegue manual y conexión continua desde GitHub.
+
+## Conectar GitHub y crear el primer pull request
+
+Antes de crear un PR, el repositorio local necesita tres cosas: un remoto `origin`, una sesión autenticada de GitHub CLI y una rama publicada. Reemplaza `TU_USUARIO` por el propietario real del repositorio:
+
+### ¿Dónde ejecutar estos comandos?
+
+Ejecuta los comandos en la aplicación **Terminal de tu Mac**, dentro de la carpeta donde clonaste este repositorio. No se escriben en GitHub ni dentro del navegador.
+
+```bash
+# Abre Terminal y entra al proyecto; ajusta la ruta a la ubicación real.
+cd ~/ruta/donde/clonaste/proyectocarrojosuesofia
+
+# Confirma que estás en el repositorio correcto.
+pwd
+git status
+```
+
+Si todavía no tienes el proyecto en tu Mac, primero clónalo y entra en él:
+
+```bash
+git clone https://github.com/TU_USUARIO/proyectocarrojosuesofia.git
+cd proyectocarrojosuesofia
+```
+
+Necesitas tener instalados `git` y GitHub CLI (`gh`). Los comandos de despliegue también requieren Google Cloud CLI (`gcloud`), pero `gcloud` no es necesario para crear un pull request. Como alternativa, los comandos de GCP pueden ejecutarse en **Google Cloud Shell**; los comandos de Git y GitHub son más sencillos desde tu Mac, donde está el proyecto.
+
+```bash
+# 1. Conectar este clon con el repositorio de GitHub
+git remote add origin https://github.com/TU_USUARIO/proyectocarrojosuesofia.git
+
+# Si origin ya existiera con una URL incorrecta, usa en su lugar:
+# git remote set-url origin https://github.com/TU_USUARIO/proyectocarrojosuesofia.git
+
+# 2. Autenticar GitHub CLI (elige GitHub.com, HTTPS y Login with a web browser)
+gh auth login
+gh auth status
+
+# 3. Publicar la rama local y configurar su upstream
+git push -u origin work
+
+# 4. Crear el PR hacia main
+gh pr create --base main --head work --fill
+```
+
+Puedes comprobar la conexión antes de crear el PR:
+
+```bash
+git remote -v
+git branch -vv
+gh repo view --json nameWithOwner,defaultBranchRef,url
+gh pr status
+```
+
+Si el repositorio utiliza `master` como rama predeterminada, sustituye `--base main` por `--base master`. Si GitHub responde `No commits between main and work`, la rama ya fue integrada o no contiene cambios nuevos. Si responde `Resource not accessible`, la cuenta autenticada no tiene acceso al repositorio o el token no tiene permisos para escribir pull requests.
