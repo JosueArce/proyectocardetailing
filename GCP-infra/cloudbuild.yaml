@@ -17,6 +17,8 @@ steps:
       - --min-instances=0
       - --max-instances=3
       - --memory=256Mi
+      - --service-account=estudio-auto-calendar@$PROJECT_ID.iam.gserviceaccount.com
+      - --set-env-vars=GOOGLE_CALENDAR_ID=josue.arce.gonzalez@gmail.com
 images:
   - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA'
 substitutions:

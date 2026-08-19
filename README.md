@@ -4,6 +4,10 @@ Landing page responsiva para un negocio de detallado automotriz. Incluye servici
 
 El prototipo está localizado para Costa Rica: precios, ingresos, gastos y ganancias se presentan en colones costarricenses (CRC). La historia de marca identifica a Josue Arce, de 29 años, como fundador del proyecto.
 
+
+Las reservaciones se conectan con Google Calendar mediante el servidor de Cloud Run y generan una notificación para Josue. La configuración inicial de permisos está documentada en [`GCP-infra/README.md`](GCP-infra/README.md#integración-con-google-calendar).
+
+El despliegue continuo de `main` se crea con `GCP-infra/create-trigger.sh`: cada merge aprobado genera una imagen identificada por el SHA del commit y una nueva revisión de Cloud Run.
 ### Accesos de demostración
 
 El acceso administrativo local para evaluar el prototipo es `admin@estudioauto.com` / `admin123`. Las cuentas, contraseñas, vehículos, citas y finanzas se guardan solamente en `localStorage`; esta implementación no ofrece seguridad real y debe sustituirse por autenticación, API y base de datos antes de operar con clientes reales.
@@ -33,7 +37,7 @@ El [`Dockerfile`](Dockerfile) de la raíz está listo para que Cloud Run constru
 
 ## Conectar GitHub y crear el primer pull request
 
-Antes de crear un PR, el repositorio local necesita tres cosas: un remoto `origin`, una sesión autenticada de GitHub CLI y una rama publicada. Reemplaza `TU_USUARIO` por el propietario real del repositorio:
+Antes de crear un PR, el repositorio local necesita tres cosas: un remoto `origin`, una sesión autenticada de GitHub CLI y una rama publicada. Los ejemplos ya utilizan el repositorio `JosueArce/proyectocardetailing`:
 
 ### ¿Dónde ejecutar estos comandos?
 
@@ -41,7 +45,7 @@ Ejecuta los comandos en la aplicación **Terminal de tu Mac**, dentro de la carp
 
 ```bash
 # Abre Terminal y entra al proyecto; ajusta la ruta a la ubicación real.
-cd ~/ruta/donde/clonaste/proyectocarrojosuesofia
+cd ~/ruta/donde/clonaste/proyectocardetailing
 
 # Confirma que estás en el repositorio correcto.
 pwd
@@ -51,19 +55,17 @@ git status
 Si todavía no tienes el proyecto en tu Mac, primero clónalo y entra en él:
 
 ```bash
-git clone https://github.com/TU_USUARIO/proyectocarrojosuesofia.git
-cd proyectocarrojosuesofia
+git clone https://github.com/JosueArce/proyectocardetailing.git
+cd proyectocardetailing
 ```
 
 Necesitas tener instalados `git` y GitHub CLI (`gh`). Los comandos de despliegue también requieren Google Cloud CLI (`gcloud`), pero `gcloud` no es necesario para crear un pull request. Como alternativa, los comandos de GCP pueden ejecutarse en **Google Cloud Shell**; los comandos de Git y GitHub son más sencillos desde tu Mac, donde está el proyecto.
 
 ```bash
 # 1. Conectar este clon con el repositorio de GitHub
-git remote add origin https://github.com/TU_USUARIO/proyectocarrojosuesofia.git
+git remote add origin https://github.com/JosueArce/proyectocardetailing.git
 
 # Si origin ya existiera con una URL incorrecta, usa en su lugar:
-# git remote set-url origin https://github.com/TU_USUARIO/proyectocarrojosuesofia.git
-
 # 2. Autenticar GitHub CLI (elige GitHub.com, HTTPS y Login with a web browser)
 gh auth login
 gh auth status

@@ -49,14 +49,25 @@ El pipeline incluido aplica este flujo:
 
 ### Configuración del despliegue continuo
 
+La configuración automatizada utiliza el repositorio `JosueArce/proyectocardetailing`, escucha exclusivamente `^main$` y evita crear el trigger dos veces:
+
+```bash
+export PROJECT_ID="tu-id-de-proyecto"
+./GCP-infra/create-trigger.sh
+```
+
+Antes de ejecutar el script por primera vez, instala o autoriza la aplicación **Google Cloud Build** en el repositorio de GitHub desde **Cloud Build → Repositories**. El script crea las cuentas de servicio, asigna permisos mínimos y crea `deploy-main-cloud-run`. Si la conexión de GitHub aún no está autorizada, `gcloud` rechazará la creación del trigger y deberás completar ese paso en la consola.
+
+El evento técnico es un `push` a `main`: GitHub produce ese evento cuando se integra un pull request. Para garantizar que nunca se despliegue un push directo, protege `main` en **GitHub → Settings → Branches → Add branch protection rule** y activa **Require a pull request before merging**.
+
 1. Sube esta rama al repositorio existente:
    ```bash
-   git remote add origin https://github.com/TU_USUARIO/proyectocarrojosuesofia.git
+   git remote add origin https://github.com/JosueArce/proyectocardetailing.git
    git push -u origin work
    ```
    Si `origin` ya existe, utiliza `git remote set-url origin URL` en lugar de `git remote add`.
 2. Abre **Google Cloud Console → Cloud Build → Repositories (2nd gen)** y selecciona **Link repository**.
-3. Elige **GitHub**, autoriza la aplicación de Google Cloud Build y selecciona `proyectocarrojosuesofia`.
+3. Elige **GitHub**, autoriza la aplicación de Google Cloud Build y selecciona `proyectocardetailing`.
 4. En **Cloud Build → Triggers**, crea un trigger de evento **Push to a branch**. Para producción, utiliza `^main$` y protege `main` en GitHub para que solo reciba cambios mediante pull request aprobado.
 5. Selecciona **Cloud Build configuration file** e indica `/GCP-infra/cloudbuild.yaml`.
 6. Configura la cuenta de servicio del trigger con permisos mínimos de **Cloud Run Admin**, **Artifact Registry Writer**, **Service Account User** y **Logs Writer**.
@@ -109,3 +120,26 @@ curl http://localhost:8080/health
 ```
 
 Abre `http://localhost:8080` en el navegador.
+
+## Integración con Google Calendar
+
+El servidor crea un evento en `josue.arce.gonzalez@gmail.com` cuando el formulario confirma una cita. La integración utiliza las credenciales automáticas de la cuenta de servicio de Cloud Run; no se deben guardar llaves JSON en el repositorio.
+
+### Configuración inicial
+
+1. Habilita Google Calendar API:
+   ```bash
+   gcloud services enable calendar-json.googleapis.com --project="$PROJECT_ID"
+   ```
+2. Crea la cuenta de servicio dedicada que ejecutará Cloud Run (el script `deploy.sh` también la crea automáticamente):
+   ```bash
+   gcloud iam service-accounts create estudio-auto-calendar \
+     --display-name="Estudio Auto Calendar" \
+     --project="$PROJECT_ID"
+   ```
+3. En Google Calendar, abre **Configuración → Configuración de mis calendarios → Compartir con personas o grupos específicos**. Agrega `estudio-auto-calendar@TU_PROJECT_ID.iam.gserviceaccount.com` con permiso **Hacer cambios en eventos**.
+4. En la configuración de ese calendario, abre **Otras notificaciones → Eventos nuevos** y selecciona **Correo electrónico**. Así Google Calendar enviará a `josue.arce.gonzalez@gmail.com` una notificación cuando la cuenta de servicio agregue una cita.
+5. Despliega el servicio. El pipeline define `GOOGLE_CALENDAR_ID` como `josue.arce.gonzalez@gmail.com`.
+6. Registra una cita de prueba y confirma que el evento aparece y llega la notificación. Revisa spam y la configuración anterior si el correo no aparece.
+
+Para utilizar un calendario separado, créalo, compártelo con la cuenta de servicio y reemplaza `GOOGLE_CALENDAR_ID` por el ID que aparece en **Integrar calendario**. El endpoint valida los datos, utiliza la zona horaria `America/Costa_Rica` y responde con error sin registrar localmente la cita si Calendar no la confirma.

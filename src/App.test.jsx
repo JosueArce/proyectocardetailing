@@ -30,6 +30,7 @@ describe('sitio de detallado automotriz', () => {
     const storedBookings = JSON.parse(localStorage.getItem('detail-bookings'))
     expect(storedBookings).toHaveLength(1)
     expect(storedBookings[0].cost).toBe(60000)
+    expect(fetch).toHaveBeenCalledWith('/api/bookings', expect.objectContaining({ method: 'POST' }))
 
     await user.click(within(dialog).getByRole('button', { name: 'Listo' }))
     await user.click(screen.getByRole('button', { name: 'Administrar' }))
