@@ -1,6 +1,6 @@
 steps:
   - name: gcr.io/cloud-builders/docker
-    args: ['build', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA', '.']
+    args: ['build', '--build-arg', 'VITE_SINPE_PHONE=${_SINPE_PHONE}', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA', '.']
   - name: gcr.io/cloud-builders/docker
     args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA']
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
@@ -25,6 +25,8 @@ substitutions:
   _REGION: us-west1
   _REPOSITORY: car-detailing
   _SERVICE: proyectocardetailing
-
+  # Es información pública mostrada al cliente; reemplázala por el SINPE real.
+  _SINPE_PHONE: '+506 0000-0000'
+main
 options:
   logging: CLOUD_LOGGING_ONLY

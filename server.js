@@ -2,21 +2,41 @@ import express from 'express'
 import { google } from 'googleapis'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-
-import { sendBookingNotifications } from './notifications.js'
+import crypto from 'node:crypto'
+import { sendBookingNotifications, sendBookingUpdateEmail } from './notifications.js'
 
 const app = express()
 const port = Number(process.env.PORT || 8080)
 const calendarId = process.env.GOOGLE_CALENDAR_ID || 'josue.arce.gonzalez@gmail.com'
 const timeZone = 'America/Costa_Rica'
-
 const serviceCatalog = { Esencial: { duration: 90, cost: 25000 }, Signature: { duration: 180, cost: 60000 }, 'Ceramic Pro': { duration: 360, cost: 150000 } }
 const requiredFields = ['name', 'phone', 'email', 'vehicle', 'service', 'date', 'time']
-
+const adminEmail = process.env.ADMIN_EMAIL || 'admin@estudioauto.com'
+const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
+const sessionSecret = process.env.SESSION_SECRET || 'development-only-change-me'
 app.disable('x-powered-by')
 app.use(express.json({ limit: '32kb' }))
 
 app.get('/health', (_request, response) => response.type('text').send('ok'))
+
+const signSession = value => crypto.createHmac('sha256', sessionSecret).update(value).digest('hex')
+const requireAdmin = (request, response, next) => {
+  const cookie = request.headers.cookie?.split(';').map(value => value.trim()).find(value => value.startsWith('admin_session='))?.split('=')[1]
+  if (!cookie) return response.status(401).json({ error: 'Se requiere una sesión administrativa.' })
+  const [expires, signature] = decodeURIComponent(cookie).split('.')
+  const expected = signSession(expires)
+  if (!signature || Number(expires) < Date.now() || signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return response.status(401).json({ error: 'La sesión administrativa expiró.' })
+  next()
+}
+
+app.post('/api/admin/login', (request, response) => {
+  if (request.body?.email !== adminEmail || request.body?.password !== adminPassword) return response.status(401).json({ error: 'Credenciales administrativas incorrectas.' })
+  const expires = String(Date.now() + 8 * 60 * 60 * 1000)
+  const token = encodeURIComponent(`${expires}.${signSession(expires)}`)
+  response.setHeader('Set-Cookie', `admin_session=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=28800`)
+  return response.json({ ok: true })
+})
+
 
 app.post('/api/bookings', async (request, response) => {
   const booking = request.body || {}
@@ -26,38 +46,59 @@ app.post('/api/bookings', async (request, response) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(booking.date) || !/^\d{2}:\d{2}$/.test(booking.time)) {
     return response.status(400).json({ error: 'La fecha o la hora no tienen un formato válido.' })
   }
-
   if (!serviceCatalog[booking.service]) return response.status(400).json({ error: 'El servicio seleccionado no es válido.' })
+  if (!['sinpe', 'cash'].includes(booking.paymentMethod)) return response.status(400).json({ error: 'El método de pago no es válido.' })
+  if (booking.paymentMethod === 'sinpe' && !booking.paymentEvidenceName) return response.status(400).json({ error: 'Debes adjuntar el comprobante de SINPE Móvil.' })
 
   try {
     const auth = new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/calendar'] })
     const calendar = google.calendar({ version: 'v3', auth })
     const start = new Date(`${booking.date}T${booking.time}:00-06:00`)
-
     const { duration, cost } = serviceCatalog[booking.service]
-    const confirmedBooking = { ...booking, cost }
-
+    const confirmedBooking = { ...booking, cost, paymentStatus: 'Pendiente' }
     const end = new Date(start.getTime() + duration * 60_000)
     const event = await calendar.events.insert({
       calendarId,
       requestBody: {
         summary: `${booking.service} · ${booking.vehicle}`,
-
-        description: [`Cliente: ${booking.name}`, `Teléfono: ${booking.phone}`, `Vehículo: ${booking.vehicle}`, `Servicio: ${booking.service}`, `Costo: ₡${cost.toLocaleString('es-CR')}`, booking.notes ? `Notas: ${booking.notes}` : ''].filter(Boolean).join('\n'),
-
+        description: [`Cliente: ${booking.name}`, `Teléfono: ${booking.phone}`, `Vehículo: ${booking.vehicle}`, `Servicio: ${booking.service}`, `Costo: ₡${cost.toLocaleString('es-CR')}`, `Pago: ${booking.paymentMethod === 'sinpe' ? 'SINPE Móvil' : 'Efectivo'} · Pendiente`, booking.notes ? `Notas: ${booking.notes}` : ''].filter(Boolean).join('\n'),
         start: { dateTime: start.toISOString(), timeZone },
         end: { dateTime: end.toISOString(), timeZone },
       },
     })
-
     const notifications = await sendBookingNotifications(confirmedBooking)
     console.log(JSON.stringify({ severity: 'INFO', message: 'Notificaciones de reservación procesadas', eventId: event.data.id, notifications }))
-    return response.status(201).json({ eventId: event.data.id, htmlLink: event.data.htmlLink, notifications })
+    return response.status(201).json({ eventId: event.data.id, htmlLink: event.data.htmlLink, notifications, paymentStatus: confirmedBooking.paymentStatus })
   } catch (error) {
     const calendarError = error.response?.data?.error || error.errors || error.message
     console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudo crear el evento de Google Calendar', calendarId, calendarError }))
-
     return response.status(502).json({ error: 'No fue posible confirmar la cita en el calendario. Intenta nuevamente.' })
+  }
+})
+
+app.post('/api/booking-updates', requireAdmin, async (request, response) => {
+  const { booking, changes = {}, changeLabel = 'Actualización de cita' } = request.body || {}
+  if (!booking?.email || !booking?.service) return response.status(400).json({ error: 'La reservación no es válida.' })
+  const updatedBooking = { ...booking, ...changes }
+  if (changes.status === 'Completada' && updatedBooking.paymentStatus !== 'Pagado') return response.status(400).json({ error: 'Debes registrar el pago antes de completar la cita.' })
+  try {
+    if (booking.calendarEventId) {
+      const auth = new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/calendar'] })
+      const calendar = google.calendar({ version: 'v3', auth })
+      if (changes.status === 'Cancelada') await calendar.events.delete({ calendarId, eventId: booking.calendarEventId })
+      else {
+        const start = new Date(`${updatedBooking.date}T${updatedBooking.time}:00-06:00`)
+        const duration = serviceCatalog[updatedBooking.service]?.duration || 120
+        const end = new Date(start.getTime() + duration * 60_000)
+        await calendar.events.patch({ calendarId, eventId: booking.calendarEventId, requestBody: { description: [`Estado: ${updatedBooking.status}`, `Cliente: ${updatedBooking.name}`, `Teléfono: ${updatedBooking.phone}`, `Vehículo: ${updatedBooking.vehicle}`, `Servicio: ${updatedBooking.service}`, updatedBooking.workDone ? `Trabajo realizado: ${updatedBooking.workDone}` : ''].filter(Boolean).join('\n'), start: { dateTime: start.toISOString(), timeZone }, end: { dateTime: end.toISOString(), timeZone } } })
+      }
+    }
+    const notification = await sendBookingUpdateEmail(updatedBooking, changeLabel)
+    console.log(JSON.stringify({ severity: 'INFO', message: 'Actualización de cita notificada', bookingId: booking.id, changeLabel, notification }))
+    return response.json({ booking: updatedBooking, notification })
+  } catch (error) {
+    console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudo actualizar o notificar la cita', bookingId: booking.id, error: error.response?.data?.error || error.message }))
+    return response.status(502).json({ error: 'No fue posible actualizar y notificar la cita.' })
   }
 })
 
@@ -66,4 +107,3 @@ app.use('/assets', express.static(path.join(root, 'dist', 'assets'), { maxAge: '
 app.get(/.*/, (_request, response) => response.sendFile(path.join(root, 'dist', 'index.html')))
 
 app.listen(port, '0.0.0.0', () => console.log(JSON.stringify({ severity: 'INFO', message: `Estudio Auto escuchando en el puerto ${port}`, calendarId, timeZone })))
-

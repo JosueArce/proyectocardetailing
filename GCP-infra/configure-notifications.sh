@@ -10,6 +10,8 @@ RUNTIME_SA="estudio-auto-calendar@$PROJECT_ID.iam.gserviceaccount.com"
 : "${WHATSAPP_ACCESS_TOKEN:?Define WHATSAPP_ACCESS_TOKEN}"
 : "${WHATSAPP_PHONE_NUMBER_ID:?Define WHATSAPP_PHONE_NUMBER_ID}"
 : "${WHATSAPP_TEMPLATE_NAME:?Define WHATSAPP_TEMPLATE_NAME}"
+: "${ADMIN_PASSWORD:?Define ADMIN_PASSWORD}"
+: "${SESSION_SECRET:?Define SESSION_SECRET con al menos 32 caracteres aleatorios}"
 
 gcloud services enable secretmanager.googleapis.com --project="$PROJECT_ID"
 
@@ -26,11 +28,13 @@ put_secret() {
 
 put_secret estudio-auto-resend-api-key "$RESEND_API_KEY"
 put_secret estudio-auto-whatsapp-token "$WHATSAPP_ACCESS_TOKEN"
+put_secret estudio-auto-admin-password "$ADMIN_PASSWORD"
+put_secret estudio-auto-session-secret "$SESSION_SECRET"
 
 gcloud run services update "$SERVICE" \
   --region="$REGION" \
   --project="$PROJECT_ID" \
-  --update-secrets="RESEND_API_KEY=estudio-auto-resend-api-key:latest,WHATSAPP_ACCESS_TOKEN=estudio-auto-whatsapp-token:latest" \
-  --update-env-vars="EMAIL_FROM=$EMAIL_FROM,OWNER_EMAIL=josue.arce.gonzalez@gmail.com,WHATSAPP_PHONE_NUMBER_ID=$WHATSAPP_PHONE_NUMBER_ID,WHATSAPP_TEMPLATE_NAME=$WHATSAPP_TEMPLATE_NAME,WHATSAPP_API_VERSION=${WHATSAPP_API_VERSION:-v23.0}"
+  --update-secrets="RESEND_API_KEY=estudio-auto-resend-api-key:latest,WHATSAPP_ACCESS_TOKEN=estudio-auto-whatsapp-token:latest,ADMIN_PASSWORD=estudio-auto-admin-password:latest,SESSION_SECRET=estudio-auto-session-secret:latest" \
+  --update-env-vars="EMAIL_FROM=$EMAIL_FROM,OWNER_EMAIL=josue.arce.gonzalez@gmail.com,ADMIN_EMAIL=admin@estudioauto.com,WHATSAPP_PHONE_NUMBER_ID=$WHATSAPP_PHONE_NUMBER_ID,WHATSAPP_TEMPLATE_NAME=$WHATSAPP_TEMPLATE_NAME,WHATSAPP_API_VERSION=${WHATSAPP_API_VERSION:-v23.0}"
 
 printf 'Notificaciones configuradas en %s (%s).\n' "$SERVICE" "$REGION"

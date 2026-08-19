@@ -18,7 +18,26 @@ async function sendEmail(booking, fetchImpl) {
       from,
       to: recipients,
       subject: `Cita confirmada · ${booking.service} · ${booking.date}`,
-      html: `<h2>Tu cita de detallado fue registrada</h2><p>Hola ${escapeHtml(booking.name)},</p><p>Estos son los datos de la cita:</p><ul><li><strong>Servicio:</strong> ${escapeHtml(booking.service)}</li><li><strong>Vehículo:</strong> ${escapeHtml(booking.vehicle)}</li><li><strong>Fecha:</strong> ${escapeHtml(booking.date)}</li><li><strong>Hora:</strong> ${escapeHtml(booking.time)}</li><li><strong>Costo estimado:</strong> ₡${Number(booking.cost || 0).toLocaleString('es-CR')}</li></ul><p>Josue se comunicará contigo si necesita confirmar algún detalle.</p>`,
+      html: `<h2>Tu cita de detallado fue registrada</h2><p>Hola ${escapeHtml(booking.name)},</p><p>Estos son los datos de la cita:</p><ul><li><strong>Servicio:</strong> ${escapeHtml(booking.service)}</li><li><strong>Vehículo:</strong> ${escapeHtml(booking.vehicle)}</li><li><strong>Fecha:</strong> ${escapeHtml(booking.date)}</li><li><strong>Hora:</strong> ${escapeHtml(booking.time)}</li><li><strong>Costo estimado:</strong> ₡${Number(booking.cost || 0).toLocaleString('es-CR')}</li><li><strong>Pago:</strong> ${booking.paymentMethod === 'sinpe' ? 'SINPE Móvil' : 'Efectivo'} · ${escapeHtml(booking.paymentStatus || 'Pendiente')}</li></ul><p>La reserva permanecerá pendiente hasta que Josue la apruebe.</p>`,
+    }),
+  })
+  if (!response.ok) throw new Error(`Resend respondió ${response.status}: ${await response.text()}`)
+  return { channel: 'email', status: 'sent' }
+}
+
+export async function sendBookingUpdateEmail(booking, changeLabel, fetchImpl = fetch) {
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.EMAIL_FROM
+  if (!apiKey || !from) return { channel: 'email', status: 'skipped', reason: 'not_configured' }
+  const recipients = [...new Set([booking.email, ownerEmail].filter(Boolean))]
+  const response = await fetchImpl('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from,
+      to: recipients,
+      subject: `${changeLabel} · ${booking.service} · ${booking.date}`,
+      html: `<h2>${escapeHtml(changeLabel)}</h2><p>Hola ${escapeHtml(booking.name)},</p><p>Tu cita de detallado fue actualizada.</p><ul><li><strong>Estado:</strong> ${escapeHtml(booking.status)}</li><li><strong>Servicio:</strong> ${escapeHtml(booking.service)}</li><li><strong>Vehículo:</strong> ${escapeHtml(booking.vehicle)}</li><li><strong>Fecha:</strong> ${escapeHtml(booking.date)}</li><li><strong>Hora:</strong> ${escapeHtml(booking.time)}</li><li><strong>Pago:</strong> ${booking.paymentMethod === 'sinpe' ? 'SINPE Móvil' : 'Efectivo'} · ${escapeHtml(booking.paymentStatus || 'Pendiente')}</li></ul>${booking.workDone ? `<p><strong>Trabajo realizado:</strong> ${escapeHtml(booking.workDone)}</p>` : ''}<p>Josue y el cliente reciben esta misma actualización.</p>`,
     }),
   })
   if (!response.ok) throw new Error(`Resend respondió ${response.status}: ${await response.text()}`)

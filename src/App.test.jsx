@@ -12,6 +12,20 @@ describe('sitio de detallado automotriz', () => {
     expect(screen.getByText('₡60.000')).toBeInTheDocument()
   })
 
+  it('muestra SINPE, solicita comprobante y mantiene tarjeta en pausa', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText('+506 0000-0000')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText(/comprobante sinpe/i)).toBeRequired()
+    expect(within(dialog).getByRole('radio', { name: /tarjeta/i })).toBeDisabled()
+    const receipt = new File(['receipt'], 'comprobante.pdf', { type: 'application/pdf' })
+    await user.upload(within(dialog).getByLabelText(/comprobante sinpe/i), receipt)
+    expect(within(dialog).getByText(/comprobante\.pdf/)).toBeInTheDocument()
+  })
+
   it('registra una cita y permite gestionarla desde el panel', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -24,6 +38,7 @@ describe('sitio de detallado automotriz', () => {
     await user.type(within(dialog).getByLabelText(/vehículo/i), 'Mazda 3 2024')
     await user.type(within(dialog).getByLabelText(/fecha/i), '2030-05-20')
     await user.selectOptions(within(dialog).getByLabelText(/hora/i), '11:00')
+    await user.click(within(dialog).getByRole('radio', { name: /efectivo/i }))
     await user.click(within(dialog).getByRole('button', { name: /solicitar reservación/i }))
 
     expect(within(dialog).getByRole('heading', { name: /gracias, sofía/i })).toBeInTheDocument()
@@ -43,16 +58,18 @@ describe('sitio de detallado automotriz', () => {
     expect(within(admin).getByText('Sofía Méndez')).toBeInTheDocument()
     expect(within(admin).getByText('Mazda 3 2024')).toBeInTheDocument()
     expect(within(admin).getByRole('link', { name: /whatsapp/i })).toHaveAttribute('href', expect.stringContaining('88881234'))
-
     await user.click(within(admin).getByRole('button', { name: /ver reserva y gestionar/i }))
     const detail = screen.getByText('DETALLE DE LA RESERVA').closest('section')
     expect(within(detail).getByRole('heading', { name: 'Signature' })).toBeInTheDocument()
+    expect(within(detail).getByRole('button', { name: /finalizar/i })).toBeDisabled()
     await user.click(within(detail).getByRole('button', { name: /aprobar/i }))
+    expect(fetch).toHaveBeenCalledWith('/api/booking-updates', expect.objectContaining({ method: 'POST' }))
     await user.click(within(detail).getByRole('button', { name: /acabado exterior/i }))
     expect(within(detail).getByAltText('Acabado exterior')).toBeInTheDocument()
+    await user.click(within(detail).getByRole('button', { name: /marcar efectivo como pagado/i }))
+    expect(within(detail).getByRole('button', { name: /finalizar/i })).toBeEnabled()
     await user.click(within(detail).getByRole('button', { name: 'Cerrar' }))
     expect(within(admin).getByText('Confirmada')).toBeInTheDocument()
-
   })
 
   it('muestra el estado vacío del panel cuando no hay citas', async () => {
@@ -114,7 +131,7 @@ describe('sitio de detallado automotriz', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: 'Hola, Ana' }))
     const portal = screen.getByRole('dialog')
-    await user.click(within(portal).getByRole('button', { name: /signature/i }))
+    await user.click(within(portal).getByRole('button', { name: /abrir detalle de signature/i }))
     expect(screen.getByText('Descontaminación y cera premium.')).toBeInTheDocument()
     expect(screen.getByAltText('Resultado final')).toBeInTheDocument()
   })

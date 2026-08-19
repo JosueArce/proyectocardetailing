@@ -2,6 +2,9 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
+ARG VITE_SINPE_PHONE="+506 0000-0000"
+ENV VITE_SINPE_PHONE=$VITE_SINPE_PHONE
+
 COPY package*.json ./
 RUN npm install --no-audit --no-fund
 

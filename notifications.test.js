@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { sendBookingNotifications } from './notifications'
+import { sendBookingNotifications, sendBookingUpdateEmail } from './notifications'
 
-const booking = { name: 'Ana', email: 'ana@example.com', phone: '8888-9999', vehicle: 'Toyota RAV4', service: 'Signature', date: '2030-06-15', time: '09:00', cost: 60000, whatsappOptIn: true }
+const booking = { name: 'Ana', email: 'ana@example.com', phone: '8888-9999', vehicle: 'Toyota RAV4', service: 'Signature', date: '2030-06-15', time: '09:00', cost: 60000, paymentMethod: 'sinpe', paymentStatus: 'Pendiente', whatsappOptIn: true }
 const keys = ['RESEND_API_KEY', 'EMAIL_FROM', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_TEMPLATE_NAME']
 
 afterEach(() => keys.forEach(key => delete process.env[key]))
@@ -41,5 +41,15 @@ describe('notificaciones de reservación', () => {
     const results = await sendBookingNotifications({ ...booking, whatsappOptIn: false }, fetchMock)
     expect(results[1]).toEqual({ channel: 'whatsapp', status: 'skipped', reason: 'no_opt_in' })
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('envía al cliente y al propietario los cambios de estado', async () => {
+    process.env.RESEND_API_KEY = 'resend-test'
+    process.env.EMAIL_FROM = 'Citas <citas@example.com>'
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => '' })
+    await expect(sendBookingUpdateEmail({ ...booking, status: 'Cancelada' }, 'Cita cancelada', fetchMock)).resolves.toEqual({ channel: 'email', status: 'sent' })
+    const payload = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(payload.to).toEqual(expect.arrayContaining(['ana@example.com', 'josue.arce.gonzalez@gmail.com']))
+    expect(payload.subject).toContain('Cita cancelada')
   })
 })

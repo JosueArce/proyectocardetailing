@@ -10,11 +10,17 @@ Las reservaciones se conectan con Google Calendar mediante el servidor de Cloud 
 
 Las confirmaciones por correo y WhatsApp Business son opcionales y se configuran con Secret Manager mediante `GCP-infra/configure-notifications.sh`.
 
+El cliente y Josue reciben correo al registrar la cita y también cuando administración la aprueba, cancela, finaliza, documenta el trabajo o agrega evidencias. Las actualizaciones administrativas utilizan una sesión segura HttpOnly y sincronizan el evento de Calendar cuando existe un `calendarEventId`.
+
+El formulario permite seleccionar **SINPE Móvil** o **efectivo**. SINPE solicita un comprobante y ambas opciones mantienen la cita pendiente hasta la revisión administrativa; el pago con tarjeta ya aparece como una opción visual deshabilitada. Administración registra el pago antes de poder terminar el servicio. Antes de desplegar, reemplaza `_SINPE_PHONE` en `GCP-infra/cloudbuild.yaml` por el número real que se mostrará públicamente.
+
+La arquitectura económica de persistencia propuesta utiliza Firestore Native para datos y un bucket privado de Cloud Storage para comprobantes y evidencias. Los scripts, reglas, índices y diagramas están en [`GCP-infra/storage/`](GCP-infra/storage/README.md). Esta infraestructura está preparada, pero el prototipo todavía conserva los datos y solamente el nombre del comprobante en el navegador hasta implementar los endpoints de carga y repositorios de Firestore.
+
 El despliegue continuo de `main` se crea con `GCP-infra/create-trigger.sh`: cada merge aprobado genera una imagen identificada por el SHA del commit y una nueva revisión de Cloud Run.
 
-### Accesos de demostración
+### Acceso administrativo
 
-El acceso administrativo local para evaluar el prototipo es `admin@estudioauto.com` / `admin123`. Las cuentas, contraseñas, vehículos, citas y finanzas se guardan solamente en `localStorage`; esta implementación no ofrece seguridad real y debe sustituirse por autenticación, API y base de datos antes de operar con clientes reales.
+El correo administrativo es `admin@estudioauto.com`; la contraseña y el secreto de sesión se configuran en Secret Manager. Los vehículos, citas y finanzas todavía se guardan en `localStorage`, por lo que se requiere una base de datos antes de operar con clientes reales.
 
 ## Desarrollo
 
