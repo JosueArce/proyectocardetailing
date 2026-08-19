@@ -23,8 +23,25 @@ describe('sitio de detallado automotriz', () => {
     expect(within(dialog).getByRole('radio', { name: /tarjeta/i })).toBeDisabled()
     const receipt = new File(['receipt'], 'comprobante.pdf', { type: 'application/pdf' })
     await user.upload(within(dialog).getByLabelText(/comprobante sinpe/i), receipt)
-
     await waitFor(() => expect(within(dialog).getByText(/comprobante\.pdf/)).toBeInTheDocument())
+  })
+
+  it('presenta errores de comprobante en lenguaje útil para el cliente', async () => {
+    fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.' }) })
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
+    const dialog = screen.getByRole('dialog')
+    await user.type(within(dialog).getByLabelText(/nombre completo/i), 'Sofía')
+    await user.type(within(dialog).getByLabelText(/teléfono/i), '88881234')
+    await user.type(within(dialog).getByLabelText(/correo/i), 'sofia@example.com')
+    await user.type(within(dialog).getByLabelText(/vehículo/i), 'Nissan Navara')
+    await user.type(within(dialog).getByLabelText(/fecha/i), '2030-08-22')
+    await user.selectOptions(within(dialog).getByLabelText(/hora/i), '14:00')
+    await user.click(within(dialog).getByRole('radio', { name: /efectivo/i }))
+    await user.click(within(dialog).getByRole('button', { name: /solicitar reservación/i }))
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('No pudimos adjuntar el comprobante')
+    expect(within(dialog).getByRole('alert')).not.toHaveTextContent(/Cloud Storage|GCP|diagnóstico administrativo/i)
   })
 
   it('registra una cita y permite gestionarla desde el panel', async () => {

@@ -186,7 +186,6 @@ gcloud run services update proyectocardetailing \
 
 Después consulta los logs de la revisión fallida; la línea `Estudio Auto escuchando en el puerto 8080` confirma que el proceso inició correctamente. Si despliegas con el trigger de `GCP-infra/cloudbuild.yaml`, esta memoria y el puerto ya se aplican automáticamente.
 
-
 ## Correo y WhatsApp de confirmación
 
 Después de crear el evento, el servidor puede enviar un correo transaccional con Resend y un mensaje mediante WhatsApp Business Cloud API. Una falla de notificación no elimina la cita ni el evento de Calendar; queda registrada en los logs como `failed` o `skipped`.

@@ -1,9 +1,7 @@
 import express from 'express'
-
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import crypto from 'node:crypto'
-import { Readable } from 'node:stream'
 import { sendBookingNotifications, sendBookingUpdateEmail } from './notifications.js'
 
 const app = express()
@@ -29,7 +27,7 @@ const getGoogleServices = async () => {
   const { google } = await import('googleapis')
   const auth = new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] })
   const projectId = await auth.getProjectId()
-  return { projectId, firestore: google.firestore({ version: 'v1', auth }), storage: google.storage({ version: 'v1', auth }) }
+  return { auth, projectId, firestore: google.firestore({ version: 'v1', auth }), storage: google.storage({ version: 'v1', auth }) }
 }
 
 const toFirestoreValue = value => {
@@ -71,10 +69,27 @@ const uploadReceipt = async (dataUrl, fileName, bookingId) => {
   if (body.length > 5 * 1024 * 1024) throw new Error('El comprobante supera el límite de 5 MB.')
   const bucket = process.env.STORAGE_BUCKET
   if (!bucket) throw new Error('STORAGE_BUCKET no está configurado.')
-  const { storage } = await getGoogleServices()
+  const { auth } = await getGoogleServices()
   const objectName = `bookings/${bookingId}/payments/${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`
-  await storage.objects.insert({ bucket, name: objectName, uploadType: 'media', media: { mimeType: match[1], body: Readable.from(body) } })
+  const client = await auth.getClient()
+  await client.request({
+    url: `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(bucket)}/o?uploadType=media&name=${encodeURIComponent(objectName)}`,
+    method: 'POST',
+    headers: { 'Content-Type': match[1], 'Content-Length': String(body.length) },
+    data: body,
+  })
   return objectName
+}
+
+const deleteReceipt = async objectName => {
+  if (!objectName || !process.env.STORAGE_BUCKET) return
+  try {
+    const { auth } = await getGoogleServices()
+    const client = await auth.getClient()
+    await client.request({ url: `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(process.env.STORAGE_BUCKET)}/o/${encodeURIComponent(objectName)}`, method: 'DELETE' })
+  } catch (error) {
+    console.error(JSON.stringify({ severity: 'WARNING', message: 'No se pudo limpiar un comprobante huérfano', objectName, detail: error.response?.data?.error || error.message }))
+  }
 }
 
 app.disable('x-powered-by')
@@ -122,7 +137,7 @@ app.get('/api/admin/system-status', requireAdmin, async (_request, response) => 
     const bucket = process.env.STORAGE_BUCKET
     if (!bucket) checks.storage = { ok: false, error: 'STORAGE_BUCKET no está configurado' }
     else {
-      await storage.buckets.get({ bucket })
+      await storage.objects.list({ bucket, maxResults: 1 })
       checks.storage = { ok: true, bucket }
     }
   } catch (error) {
@@ -145,12 +160,19 @@ app.post('/api/bookings', async (request, response) => {
   if (!['sinpe', 'cash'].includes(booking.paymentMethod)) return response.status(400).json({ error: 'El método de pago no es válido.' })
   if (booking.paymentMethod === 'sinpe' && (!booking.paymentEvidenceName || !booking.paymentEvidenceData)) return response.status(400).json({ error: 'Debes adjuntar el comprobante de SINPE Móvil.' })
 
-  let stage = 'calendar'
+  let stage = booking.paymentMethod === 'sinpe' ? 'storage' : 'calendar'
+  let uploadedReceipt = ''
   try {
-    const calendar = await getCalendar()
-    const start = new Date(`${booking.date}T${booking.time}:00-06:00`)
     const { duration, cost } = serviceCatalog[booking.service]
     const confirmedBooking = { ...booking, id: crypto.randomUUID(), cost, status: 'Pendiente', paymentStatus: 'Pendiente', createdAt: new Date().toISOString() }
+    if (booking.paymentMethod === 'sinpe') {
+      uploadedReceipt = await uploadReceipt(booking.paymentEvidenceData, booking.paymentEvidenceName, confirmedBooking.id)
+      confirmedBooking.paymentEvidencePath = uploadedReceipt
+    }
+    delete confirmedBooking.paymentEvidenceData
+    stage = 'calendar'
+    const calendar = await getCalendar()
+    const start = new Date(`${booking.date}T${booking.time}:00-06:00`)
     const end = new Date(start.getTime() + duration * 60_000)
     const event = await calendar.events.insert({
       calendarId,
@@ -162,9 +184,6 @@ app.post('/api/bookings', async (request, response) => {
       },
     })
     confirmedBooking.calendarEventId = event.data.id
-    stage = 'storage'
-    if (booking.paymentMethod === 'sinpe') confirmedBooking.paymentEvidencePath = await uploadReceipt(booking.paymentEvidenceData, booking.paymentEvidenceName, confirmedBooking.id)
-    delete confirmedBooking.paymentEvidenceData
     stage = 'firestore'
     const storedBooking = await saveBooking(confirmedBooking, true)
     stage = 'notifications'
@@ -174,8 +193,14 @@ app.post('/api/bookings', async (request, response) => {
   } catch (error) {
     const detail = error.response?.data?.error || error.errors || error.message
     console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudo completar la reservación', stage, calendarId, detail }))
-    const errors = { calendar: 'No fue posible crear la cita en Calendar.', storage: 'No fue posible guardar el comprobante en Cloud Storage.', firestore: 'No fue posible guardar la cita en Firestore.', notifications: 'La cita se guardó, pero falló el envío de notificaciones.' }
-    return response.status(502).json({ error: `${errors[stage]} Revisa el diagnóstico administrativo.` })
+    if (stage === 'calendar') await deleteReceipt(uploadedReceipt)
+    const publicErrors = {
+      calendar: 'No pudimos completar tu solicitud en este momento. Por favor intenta nuevamente.',
+      storage: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.',
+      firestore: 'No pudimos guardar tu reservación en este momento. Por favor intenta nuevamente.',
+      notifications: 'Tu cita quedó registrada, pero no pudimos enviar la confirmación. Josue se comunicará contigo.',
+    }
+    return response.status(502).json({ error: publicErrors[stage] })
   }
 })
 

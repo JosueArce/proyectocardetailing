@@ -148,7 +148,6 @@ tmp/{uploadId}/...
 
 Estos recursos **no se crean al desplegar una revisión de Cloud Run**. La aplicación no debe crear infraestructura durante su arranque. Se preparan una sola vez ejecutando `setup.sh`; después, las revisiones nuevas reutilizan la misma base de datos y el mismo bucket. El script es idempotente, por lo que se puede volver a ejecutar sin duplicarlos.
 
-
 Desde la raíz:
 
 ```bash
@@ -161,7 +160,6 @@ El script es idempotente, crea Firestore solo si no existe, crea un bucket priva
 
 
 Puedes ejecutarlo desde **Cloud Shell** o desde una Mac con `gcloud` autenticado. Cloud Build tampoco lo ejecuta en cada merge: `cloudbuild.yaml` solamente construye y despliega la aplicación, evitando que la cuenta del pipeline necesite permisos administrativos permanentes para crear bases de datos o modificar IAM.
-
 
 ## Desplegar índices y reglas
 
@@ -182,6 +180,8 @@ La reservación ya se guarda en la colección `bookings`, el panel administrativ
 4. En Cloud Storage, busca `bookings/{id}/payments/`: allí debe estar el comprobante.
 5. Cierra el navegador, abre el panel administrativo e inicia sesión. El panel consulta `/api/admin/bookings` y debe mostrar el documento guardado, aunque `localStorage` esté vacío.
 6. En la parte superior del panel, **Conexión GCP** debe mostrar en verde `Firestore conectado` y el nombre exacto del bucket. Si aparece rojo, el mismo indicador muestra la variable o permiso que falta.
+
+Los detalles técnicos de GCP se muestran únicamente en el panel administrativo y en Cloud Logging. Al cliente se le indican acciones concretas —revisar formato/tamaño, volver a intentar o elegir efectivo— sin mencionar proveedores internos.
 
 También puedes comprobarlo desde Cloud Shell:
 
