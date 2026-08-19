@@ -9,3 +9,4 @@
 @media(max-width:900px){.product-grid{grid-template-columns:1fr 1fr}.portal-grid,.admin-columns{grid-template-columns:1fr}.stats-grid{grid-template-columns:1fr 1fr}.admin-title{align-items:flex-start;flex-direction:column}}
 @media(max-width:560px){.product-grid{grid-template-columns:1fr}.portal-heading{align-items:flex-start;flex-direction:column}.stats-grid{grid-template-columns:1fr}.admin-dashboard{padding:35px 16px}.admin-title h2{font-size:28px}}
 .owner-section{background:#eaf1f8}.owner-card{max-width:800px;margin:auto;text-align:center}.owner-card h2{margin-bottom:20px}.owner-card p{color:var(--muted);font-size:17px;line-height:1.8}.owner-signature{display:block;margin-top:25px;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--blue)}
+

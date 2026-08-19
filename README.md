@@ -4,13 +4,14 @@ Landing page responsiva para un negocio de detallado automotriz. Incluye servici
 
 El prototipo está localizado para Costa Rica: precios, ingresos, gastos y ganancias se presentan en colones costarricenses (CRC). La historia de marca identifica a Josue Arce, de 29 años, como fundador del proyecto.
 
+
 Las reservaciones se conectan con Google Calendar mediante el servidor de Cloud Run y generan una notificación para Josue. La configuración inicial de permisos está documentada en [`GCP-infra/README.md`](GCP-infra/README.md#integración-con-google-calendar).
 
 El despliegue continuo de `main` se crea con `GCP-infra/create-trigger.sh`: cada merge aprobado genera una imagen identificada por el SHA del commit y una nueva revisión de Cloud Run.
-
 ### Accesos de demostración
 
 El acceso administrativo local para evaluar el prototipo es `admin@estudioauto.com` / `admin123`. Las cuentas, contraseñas, vehículos, citas y finanzas se guardan solamente en `localStorage`; esta implementación no ofrece seguridad real y debe sustituirse por autenticación, API y base de datos antes de operar con clientes reales.
+
 
 ## Desarrollo
 
@@ -65,8 +66,6 @@ Necesitas tener instalados `git` y GitHub CLI (`gh`). Los comandos de despliegue
 git remote add origin https://github.com/JosueArce/proyectocardetailing.git
 
 # Si origin ya existiera con una URL incorrecta, usa en su lugar:
-# git remote set-url origin https://github.com/JosueArce/proyectocardetailing.git
-
 # 2. Autenticar GitHub CLI (elige GitHub.com, HTTPS y Login with a web browser)
 gh auth login
 gh auth status
