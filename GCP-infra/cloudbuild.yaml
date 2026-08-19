@@ -25,5 +25,6 @@ substitutions:
   _REGION: us-west1
   _REPOSITORY: car-detailing
   _SERVICE: proyectocardetailing
+
 options:
   logging: CLOUD_LOGGING_ONLY

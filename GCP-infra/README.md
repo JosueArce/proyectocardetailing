@@ -1,5 +1,6 @@
 # Despliegue en Google Cloud Run
 
+
 La raíz del proyecto contiene el `Dockerfile` multi-stage que Cloud Run detecta automáticamente. Esta carpeta contiene el pipeline de Cloud Build y los scripts de despliegue. La imagen final ejecuta el servidor Node que integra Calendar y sirve los archivos estáticos compilados.
 
 > **Alcance del prototipo:** las citas se guardan en el `localStorage` del navegador. El despliegue permite probar la experiencia visual, pero las reservas no se comparten entre dispositivos. Para producción se necesita una API, una base de datos y autenticación para el panel.
@@ -20,9 +21,11 @@ El script habilita Cloud Run, Cloud Build y Artifact Registry; crea el repositor
 También puedes desplegar directamente desde el código fuente. Cloud Build detectará el `Dockerfile` de la raíz:
 
 ```bash
+
 gcloud run deploy proyectocardetailing \
   --source . \
   --region us-west1 \
+
   --allow-unauthenticated \
   --project "$PROJECT_ID"
 ```
@@ -30,6 +33,7 @@ gcloud run deploy proyectocardetailing \
 Variables opcionales:
 
 ```bash
+
 export REGION="us-west1"
 export REPOSITORY="car-detailing"
 export SERVICE="proyectocardetailing"
@@ -80,6 +84,7 @@ El evento técnico es un `push` a `main`: GitHub produce ese evento cuando se in
    ```
 8. Ejecuta el trigger manualmente una primera vez. Después, cada cambio integrado en `main` iniciará el pipeline automáticamente. Al terminar, consulta la URL con:
    ```bash
+
    gcloud run services describe proyectocardetailing \
      --region us-west1 \
      --format='value(status.url)'
@@ -87,25 +92,30 @@ El evento técnico es un `push` a `main`: GitHub produce ese evento cuando se in
 
 El pipeline usa por defecto `us-west1`, el repositorio `car-detailing` y el servicio `estudio-auto`. Cada imagen usa el SHA completo del commit como etiqueta inmutable. La región, el repositorio y el servicio pueden sobrescribirse mediante `_REGION`, `_REPOSITORY` y `_SERVICE` en el trigger.
 
+
 ### Entornos y estrategia de ramas
 
 Para una prueba sencilla basta con un trigger de `main` hacia `estudio-auto`. Si después necesitas separar ambientes, crea dos triggers reutilizando el mismo archivo:
 
 | Rama | Servicio Cloud Run | Uso |
 | --- | --- | --- |
+
 | `develop` | `proyectocardetailing-staging` | Validación antes de liberar |
 | `main` | `proyectocardetailing` | Producción |
 
 En el trigger de `develop`, sobrescribe `_SERVICE=proyectocardetailing-staging`. En producción, conserva `_SERVICE=proyectocardetailing`. Nunca guardes llaves JSON de cuentas de servicio en GitHub; el trigger debe utilizar una cuenta de servicio administrada en GCP con los permisos mínimos descritos arriba.
+
 
 ### Rollback
 
 Cloud Run conserva revisiones anteriores. Para regresar todo el tráfico a una revisión estable:
 
 ```bash
+
 gcloud run revisions list --service proyectocardetailing --region us-west1
 gcloud run services update-traffic estudio-auto \
   --region us-west1 \
+
   --to-revisions REVISION_ESTABLE=100
 ```
 
@@ -209,3 +219,4 @@ export WHATSAPP_TEMPLATE_NAME="cita_registrada"
 ```
 
 El script guarda los tokens como secretos, concede acceso únicamente a la cuenta de servicio de Cloud Run y crea una revisión con la configuración. El pipeline usa `--update-env-vars`, por lo que los siguientes despliegues conservan estos secretos y variables. Nunca agregues esos valores a Git, `cloudbuild.yaml` o archivos `.env` compartidos.
+

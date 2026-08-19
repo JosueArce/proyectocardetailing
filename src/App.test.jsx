@@ -43,6 +43,7 @@ describe('sitio de detallado automotriz', () => {
     expect(within(admin).getByText('Sofía Méndez')).toBeInTheDocument()
     expect(within(admin).getByText('Mazda 3 2024')).toBeInTheDocument()
     expect(within(admin).getByRole('link', { name: /whatsapp/i })).toHaveAttribute('href', expect.stringContaining('88881234'))
+
     await user.click(within(admin).getByRole('button', { name: /ver reserva y gestionar/i }))
     const detail = screen.getByText('DETALLE DE LA RESERVA').closest('section')
     expect(within(detail).getByRole('heading', { name: 'Signature' })).toBeInTheDocument()
@@ -51,6 +52,7 @@ describe('sitio de detallado automotriz', () => {
     expect(within(detail).getByAltText('Acabado exterior')).toBeInTheDocument()
     await user.click(within(detail).getByRole('button', { name: 'Cerrar' }))
     expect(within(admin).getByText('Confirmada')).toBeInTheDocument()
+
   })
 
   it('muestra el estado vacío del panel cuando no hay citas', async () => {

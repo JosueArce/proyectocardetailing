@@ -1,4 +1,6 @@
+
 import { useEffect, useState } from 'react'
+
 import { ArrowRight, CalendarDays, Car, Check, ChevronRight, Droplets, Instagram, Mail, Menu, MessageCircle, ShieldCheck, Sparkles, X } from './icons'
 import { AccessModal, AdminLogin, AdminPortal, CustomerPortal } from './PortalPanels'
 
@@ -14,8 +16,10 @@ const gallery = [
   { url: 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?auto=format&fit=crop&w=900&q=85', label: 'Acabado premium' },
 ]
 
+
 const emptyForm = { name: '', phone: '', email: '', vehicle: '', service: 'Signature', date: '', time: '', notes: '', whatsappOptIn: false }
 const minBookingDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+
 
 function App() {
   const [menu, setMenu] = useState(false)
@@ -24,15 +28,18 @@ function App() {
   const [adminLoginOpen, setAdminLoginOpen] = useState(false)
   const [accessOpen, setAccessOpen] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+
   const [bookingError, setBookingError] = useState('')
   const [bookingSaving, setBookingSaving] = useState(false)
   const [notificationResults, setNotificationResults] = useState([])
+
   const [form, setForm] = useState(emptyForm)
   const [bookings, setBookings] = useState(() => JSON.parse(localStorage.getItem('detail-bookings') || '[]'))
   const [accounts, setAccounts] = useState(() => JSON.parse(localStorage.getItem('detail-accounts') || '[]'))
   const [currentAccount, setCurrentAccount] = useState(() => JSON.parse(localStorage.getItem('detail-session') || 'null'))
   const [blockedDates, setBlockedDates] = useState(() => JSON.parse(localStorage.getItem('detail-blocked-dates') || '[]'))
   const [expenses, setExpenses] = useState(() => JSON.parse(localStorage.getItem('detail-expenses') || '[]'))
+
 
   useEffect(() => { localStorage.setItem('detail-bookings', JSON.stringify(bookings)) }, [bookings])
   useEffect(() => { localStorage.setItem('detail-accounts', JSON.stringify(accounts)) }, [accounts])
@@ -41,7 +48,9 @@ function App() {
   useEffect(() => { localStorage.setItem('detail-expenses', JSON.stringify(expenses)) }, [expenses])
   useEffect(() => { document.body.style.overflow = bookingOpen || adminOpen || accessOpen || adminLoginOpen ? 'hidden' : ''; return () => { document.body.style.overflow = '' } }, [bookingOpen, adminOpen, accessOpen, adminLoginOpen])
 
+
   const openBooking = (service) => { setForm(f => ({ ...f, service: service || f.service, name: currentAccount?.name || f.name, email: currentAccount?.email || f.email, phone: currentAccount?.phone || f.phone })); setSubmitted(false); setBookingError(''); setNotificationResults([]); setBookingOpen(true); setMenu(false) }
+
   const submit = async (e) => {
     e.preventDefault()
     const cost = services.find(s => s.name === form.service)?.cost || 0
@@ -51,7 +60,9 @@ function App() {
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'No fue posible confirmar la cita.')
       setBookings(prev => [{ ...form, cost, calendarEventId: result.eventId, id: Date.now(), status: 'Pendiente', createdAt: new Date().toISOString() }, ...prev])
+
       setNotificationResults(result.notifications || [])
+
       setSubmitted(true)
     } catch (error) { setBookingError(error.message) } finally { setBookingSaving(false) }
   }
@@ -104,6 +115,7 @@ function App() {
     <footer><a className="brand" href="#inicio"><span className="brand-mark"><Sparkles size={18}/></span><span>ESTUDIO<span>AUTO</span></span></a><p>Un proyecto costarricense de Josue Arce. El nombre comercial y los datos de contacto pueden actualizarse cuando la marca esté definida.</p><div className="socials"><a href="mailto:hola@estudioauto.com" aria-label="Correo"><Mail/></a><a href="https://instagram.com" aria-label="Instagram"><Instagram/></a><a href="https://wa.me/50600000000" aria-label="WhatsApp"><MessageCircle/></a></div><small>© 2026 Estudio Auto · Costa Rica · Aviso de privacidad</small></footer>
 
     {bookingOpen && <div className="modal-backdrop" onMouseDown={() => setBookingOpen(false)}><section className="modal" onMouseDown={e => e.stopPropagation()} aria-modal="true" role="dialog"><button className="close" aria-label="Cerrar" onClick={() => setBookingOpen(false)}><X/></button>{submitted ? <div className="success"><span><Check/></span><span className="kicker">CITA REGISTRADA</span><h2>¡Gracias, {form.name.split(' ')[0]}!</h2><p>Tu cita para <strong>{form.service}</strong> fue agregada al calendario. Josue recibió los datos para confirmarla.</p>{notificationResults.some(n => n.status === 'sent') && <div className="notification-status">{notificationResults.filter(n => n.status === 'sent').map(n => <span key={n.channel}><Check size={14}/>{n.channel === 'email' ? 'Correo enviado' : 'WhatsApp enviado'}</span>)}</div>}<button className="btn" onClick={() => { setBookingOpen(false); setForm(emptyForm) }}>Listo</button></div> : <><span className="kicker">RESERVA TU EXPERIENCIA</span><h2>Agenda tu cita</h2><p className="modal-intro">No necesitas una cuenta para reservar. Elige el horario ideal y te contactaremos.</p><form onSubmit={submit}><label>Nombre completo<input required value={form.name} onChange={e => setForm({...form,name:e.target.value})} placeholder="Tu nombre"/></label><div className="form-row"><label>Teléfono<input required type="tel" value={form.phone} onChange={e => setForm({...form,phone:e.target.value})} placeholder="+506 8888-8888"/></label><label>Correo<input required type="email" value={form.email} onChange={e => setForm({...form,email:e.target.value})} placeholder="tu@correo.com"/></label></div><label>Vehículo{currentAccount?.cars?.length ? <select required value={form.vehicle} onChange={e => setForm({...form,vehicle:e.target.value})}><option value="">Selecciona un vehículo</option>{currentAccount.cars.map(c => <option key={c.id}>{c.make} {c.model} {c.year}</option>)}</select> : <input required value={form.vehicle} onChange={e => setForm({...form,vehicle:e.target.value})} placeholder="Marca, modelo y año"/>}</label><label>Servicio<select value={form.service} onChange={e => setForm({...form,service:e.target.value})}>{services.map(s => <option key={s.name} value={s.name}>{s.name} · {s.price}</option>)}</select></label><div className="form-row"><label>Fecha<input required type="date" min={minBookingDate} value={form.date} onChange={e => setForm({...form,date:e.target.value})}/>{blockedDates.includes(form.date) && <span className="field-error">Esta fecha no está disponible.</span>}</label><label>Hora<select required value={form.time} onChange={e => setForm({...form,time:e.target.value})}><option value="">Selecciona</option><option>09:00</option><option>11:00</option><option>14:00</option><option>16:00</option></select></label></div><label>Notas (opcional)<textarea value={form.notes} onChange={e => setForm({...form,notes:e.target.value})} placeholder="Cuéntanos algo que debamos saber..."/></label><label className="consent-check"><input type="checkbox" checked={form.whatsappOptIn} onChange={e => setForm({...form,whatsappOptIn:e.target.checked})}/><span>Acepto recibir la confirmación y recordatorios de esta cita por WhatsApp.</span></label>{bookingError && <p className="form-error" role="alert">{bookingError}</p>}<button disabled={bookingSaving || blockedDates.includes(form.date)} className="btn full" type="submit">{bookingSaving ? 'Confirmando en Calendar…' : <>Solicitar reservación <ArrowRight size={18}/></>}</button><small className="privacy"><ShieldCheck size={14}/> La cita se registrará en el calendario del negocio.</small></form></>}</section></div>}
+
 
     {accessOpen && !currentAccount && <AccessModal accounts={accounts} onClose={() => setAccessOpen(false)} onLogin={a => { setCurrentAccount(a); setAccessOpen(false) }} onRegister={saveAccount}/>}
     {currentAccount && accessOpen && <CustomerPortal account={currentAccount} bookings={bookings} onAddCar={addCar} onLogout={() => { setCurrentAccount(null); setAccessOpen(false) }} onClose={() => setAccessOpen(false)}/>}
