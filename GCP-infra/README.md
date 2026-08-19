@@ -20,6 +20,7 @@ El script habilita Cloud Run, Cloud Build y Artifact Registry; crea el repositor
 También puedes desplegar directamente desde el código fuente. Cloud Build detectará el `Dockerfile` de la raíz:
 
 ```bash
+
 gcloud run deploy proyectocardetailing \
   --source . \
   --region us-west1 \
@@ -103,6 +104,7 @@ En el trigger de `develop`, sobrescribe `_SERVICE=proyectocardetailing-staging`.
 Cloud Run conserva revisiones anteriores. Para regresar todo el tráfico a una revisión estable:
 
 ```bash
+
 gcloud run revisions list --service proyectocardetailing --region us-west1
 gcloud run services update-traffic estudio-auto \
   --region us-west1 \

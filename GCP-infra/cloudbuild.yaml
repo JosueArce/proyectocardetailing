@@ -27,5 +27,6 @@ substitutions:
   _SERVICE: proyectocardetailing
   # Es información pública mostrada al cliente; reemplázala por el SINPE real.
   _SINPE_PHONE: '+506 0000-0000'
+main
 options:
   logging: CLOUD_LOGGING_ONLY

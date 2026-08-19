@@ -18,6 +18,7 @@ const sinpePhone = import.meta.env.VITE_SINPE_PHONE || '+506 0000-0000'
 const emptyForm = { name: '', phone: '', email: '', vehicle: '', service: 'Signature', date: '', time: '', notes: '', whatsappOptIn: false, paymentMethod: 'sinpe', paymentStatus: 'Pendiente', paymentEvidenceName: '' }
 const minBookingDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
 
+
 function App() {
   const [menu, setMenu] = useState(false)
   const [bookingOpen, setBookingOpen] = useState(false)

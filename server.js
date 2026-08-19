@@ -14,7 +14,6 @@ const requiredFields = ['name', 'phone', 'email', 'vehicle', 'service', 'date', 
 const adminEmail = process.env.ADMIN_EMAIL || 'admin@estudioauto.com'
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
 const sessionSecret = process.env.SESSION_SECRET || 'development-only-change-me'
-
 app.disable('x-powered-by')
 app.use(express.json({ limit: '32kb' }))
 
@@ -37,6 +36,7 @@ app.post('/api/admin/login', (request, response) => {
   response.setHeader('Set-Cookie', `admin_session=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=28800`)
   return response.json({ ok: true })
 })
+
 
 app.post('/api/bookings', async (request, response) => {
   const booking = request.body || {}
