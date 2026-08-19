@@ -43,6 +43,16 @@ describe('sitio de detallado automotriz', () => {
     expect(within(admin).getByText('Sofía Méndez')).toBeInTheDocument()
     expect(within(admin).getByText('Mazda 3 2024')).toBeInTheDocument()
     expect(within(admin).getByRole('link', { name: /whatsapp/i })).toHaveAttribute('href', expect.stringContaining('88881234'))
+
+    await user.click(within(admin).getByRole('button', { name: /ver reserva y gestionar/i }))
+    const detail = screen.getByText('DETALLE DE LA RESERVA').closest('section')
+    expect(within(detail).getByRole('heading', { name: 'Signature' })).toBeInTheDocument()
+    await user.click(within(detail).getByRole('button', { name: /aprobar/i }))
+    await user.click(within(detail).getByRole('button', { name: /acabado exterior/i }))
+    expect(within(detail).getByAltText('Acabado exterior')).toBeInTheDocument()
+    await user.click(within(detail).getByRole('button', { name: 'Cerrar' }))
+    expect(within(admin).getByText('Confirmada')).toBeInTheDocument()
+
   })
 
   it('muestra el estado vacío del panel cuando no hay citas', async () => {
@@ -94,5 +104,18 @@ describe('sitio de detallado automotriz', () => {
     fireEvent.change(within(dialog).getByLabelText('Fecha'), { target: { value: '2030-06-15' } })
     expect(within(dialog).getByText('Esta fecha no está disponible.')).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: /solicitar reservación/i })).toBeDisabled()
+  })
+
+  it('permite al cliente abrir una cita histórica y ver sus evidencias', async () => {
+    localStorage.setItem('detail-session', JSON.stringify({ id: 1, name: 'Ana López', email: 'ana@example.com', phone: '88889999', role: 'client', cars: [] }))
+    localStorage.setItem('detail-accounts', JSON.stringify([{ id: 1, name: 'Ana López', email: 'ana@example.com', phone: '88889999', role: 'client', cars: [] }]))
+    localStorage.setItem('detail-bookings', JSON.stringify([{ id: 2, name: 'Ana López', email: 'ana@example.com', phone: '88889999', vehicle: 'Toyota RAV4', service: 'Signature', date: '2025-02-10', time: '09:00', cost: 60000, status: 'Completada', workDone: 'Descontaminación y cera premium.', evidence: [{ id: 3, type: 'image', url: 'https://example.com/final.jpg', label: 'Resultado final' }] }]))
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Hola, Ana' }))
+    const portal = screen.getByRole('dialog')
+    await user.click(within(portal).getByRole('button', { name: /signature/i }))
+    expect(screen.getByText('Descontaminación y cera premium.')).toBeInTheDocument()
+    expect(screen.getByAltText('Resultado final')).toBeInTheDocument()
   })
 })

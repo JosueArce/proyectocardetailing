@@ -2,9 +2,9 @@
 set -eu
 
 PROJECT_ID="${PROJECT_ID:?Define PROJECT_ID con el ID de tu proyecto de GCP}"
-REGION="${REGION:-us-central1}"
+REGION="${REGION:-us-west1}"
 REPOSITORY="${REPOSITORY:-car-detailing}"
-SERVICE="${SERVICE:-estudio-auto}"
+SERVICE="${SERVICE:-proyectocardetailing}"
 COMMIT_SHA="$(git rev-parse HEAD)"
 
 gcloud config set project "$PROJECT_ID"

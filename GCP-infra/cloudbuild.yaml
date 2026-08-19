@@ -18,12 +18,13 @@ steps:
       - --max-instances=3
       - --memory=256Mi
       - --service-account=estudio-auto-calendar@$PROJECT_ID.iam.gserviceaccount.com
-      - --set-env-vars=GOOGLE_CALENDAR_ID=josue.arce.gonzalez@gmail.com
+      - --update-env-vars=GOOGLE_CALENDAR_ID=josue.arce.gonzalez@gmail.com
 images:
   - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA'
 substitutions:
-  _REGION: us-central1
+  _REGION: us-west1
   _REPOSITORY: car-detailing
-  _SERVICE: estudio-auto
+  _SERVICE: proyectocardetailing
+
 options:
   logging: CLOUD_LOGGING_ONLY

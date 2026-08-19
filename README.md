@@ -2,10 +2,13 @@
 
 Landing page responsiva para un negocio de detallado automotriz. Incluye servicios, precios, productos profesionales, reservación sin registro, cuentas de cliente con vehículos e historial, y un panel administrativo para citas, fechas bloqueadas, ingresos y gastos.
 
+El historial permite abrir cada reserva, consultar estado, trabajo realizado y evidencias. Administración puede aprobar, finalizar o cancelar la cita, documentar el trabajo y agregar URLs de fotografías o videos; por ahora se incluyen imágenes demostrativas y posteriormente se reemplazarán por cargas a Cloud Storage.
+
 El prototipo está localizado para Costa Rica: precios, ingresos, gastos y ganancias se presentan en colones costarricenses (CRC). La historia de marca identifica a Josue Arce, de 29 años, como fundador del proyecto.
 
-
 Las reservaciones se conectan con Google Calendar mediante el servidor de Cloud Run y generan una notificación para Josue. La configuración inicial de permisos está documentada en [`GCP-infra/README.md`](GCP-infra/README.md#integración-con-google-calendar).
+
+Las confirmaciones por correo y WhatsApp Business son opcionales y se configuran con Secret Manager mediante `GCP-infra/configure-notifications.sh`.
 
 El despliegue continuo de `main` se crea con `GCP-infra/create-trigger.sh`: cada merge aprobado genera una imagen identificada por el SHA del commit y una nueva revisión de Cloud Run.
 
@@ -33,7 +36,7 @@ Las reservaciones se almacenan en `localStorage` para que el prototipo funcione 
 
 ## Google Cloud Run
 
-El [`Dockerfile`](Dockerfile) de la raíz está listo para que Cloud Run construya la aplicación desde el código fuente. Los archivos adicionales de Cloud Build, Nginx y despliegue se encuentran en [`GCP-infra/`](GCP-infra/README.md); la guía incluye despliegue manual y conexión continua desde GitHub.
+El [`Dockerfile`](Dockerfile) de la raíz está listo para que Cloud Run construya la aplicación desde el código fuente. Los archivos adicionales de Cloud Build y despliegue se encuentran en [`GCP-infra/`](GCP-infra/README.md); la guía incluye despliegue manual, Calendar y conexión continua desde GitHub.
 
 ## Conectar GitHub y crear el primer pull request
 

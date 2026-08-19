@@ -1,6 +1,7 @@
 # Despliegue en Google Cloud Run
 
-La raíz del proyecto contiene el `Dockerfile` multi-stage que Cloud Run detecta automáticamente. Esta carpeta contiene la configuración de Nginx, el pipeline de Cloud Build y el script de despliegue. Cloud Run solo recibe los archivos estáticos compilados; las herramientas de Node no quedan en la imagen final.
+
+La raíz del proyecto contiene el `Dockerfile` multi-stage que Cloud Run detecta automáticamente. Esta carpeta contiene el pipeline de Cloud Build y los scripts de despliegue. La imagen final ejecuta el servidor Node que integra Calendar y sirve los archivos estáticos compilados.
 
 > **Alcance del prototipo:** las citas se guardan en el `localStorage` del navegador. El despliegue permite probar la experiencia visual, pero las reservas no se comparten entre dispositivos. Para producción se necesita una API, una base de datos y autenticación para el panel.
 
@@ -20,9 +21,11 @@ El script habilita Cloud Run, Cloud Build y Artifact Registry; crea el repositor
 También puedes desplegar directamente desde el código fuente. Cloud Build detectará el `Dockerfile` de la raíz:
 
 ```bash
-gcloud run deploy estudio-auto \
+
+gcloud run deploy proyectocardetailing \
   --source . \
-  --region us-central1 \
+  --region us-west1 \
+
   --allow-unauthenticated \
   --project "$PROJECT_ID"
 ```
@@ -30,9 +33,10 @@ gcloud run deploy estudio-auto \
 Variables opcionales:
 
 ```bash
-export REGION="us-central1"
+
+export REGION="us-west1"
 export REPOSITORY="car-detailing"
-export SERVICE="estudio-auto"
+export SERVICE="proyectocardetailing"
 ```
 
 ## Opción recomendada: Cloud Build Trigger desde GitHub
@@ -75,17 +79,19 @@ El evento técnico es un `push` a `main`: GitHub produce ese evento cuando se in
    ```bash
    gcloud artifacts repositories create car-detailing \
      --repository-format=docker \
-     --location=us-central1 \
+     --location=us-west1 \
      --project="$PROJECT_ID"
    ```
 8. Ejecuta el trigger manualmente una primera vez. Después, cada cambio integrado en `main` iniciará el pipeline automáticamente. Al terminar, consulta la URL con:
    ```bash
-   gcloud run services describe estudio-auto \
-     --region us-central1 \
+
+   gcloud run services describe proyectocardetailing \
+     --region us-west1 \
      --format='value(status.url)'
    ```
 
-El pipeline usa por defecto `us-central1`, el repositorio `car-detailing` y el servicio `estudio-auto`. Cada imagen usa el SHA completo del commit como etiqueta inmutable. La región, el repositorio y el servicio pueden sobrescribirse mediante `_REGION`, `_REPOSITORY` y `_SERVICE` en el trigger.
+El pipeline usa por defecto `us-west1`, el repositorio `car-detailing` y el servicio `estudio-auto`. Cada imagen usa el SHA completo del commit como etiqueta inmutable. La región, el repositorio y el servicio pueden sobrescribirse mediante `_REGION`, `_REPOSITORY` y `_SERVICE` en el trigger.
+
 
 ### Entornos y estrategia de ramas
 
@@ -93,19 +99,23 @@ Para una prueba sencilla basta con un trigger de `main` hacia `estudio-auto`. Si
 
 | Rama | Servicio Cloud Run | Uso |
 | --- | --- | --- |
-| `develop` | `estudio-auto-staging` | Validación antes de liberar |
-| `main` | `estudio-auto` | Producción |
 
-En el trigger de `develop`, sobrescribe `_SERVICE=estudio-auto-staging`. En producción, conserva `_SERVICE=estudio-auto`. Nunca guardes llaves JSON de cuentas de servicio en GitHub; el trigger debe utilizar una cuenta de servicio administrada en GCP con los permisos mínimos descritos arriba.
+| `develop` | `proyectocardetailing-staging` | Validación antes de liberar |
+| `main` | `proyectocardetailing` | Producción |
+
+En el trigger de `develop`, sobrescribe `_SERVICE=proyectocardetailing-staging`. En producción, conserva `_SERVICE=proyectocardetailing`. Nunca guardes llaves JSON de cuentas de servicio en GitHub; el trigger debe utilizar una cuenta de servicio administrada en GCP con los permisos mínimos descritos arriba.
+
 
 ### Rollback
 
 Cloud Run conserva revisiones anteriores. Para regresar todo el tráfico a una revisión estable:
 
 ```bash
-gcloud run revisions list --service estudio-auto --region us-central1
+
+gcloud run revisions list --service proyectocardetailing --region us-west1
 gcloud run services update-traffic estudio-auto \
-  --region us-central1 \
+  --region us-west1 \
+
   --to-revisions REVISION_ESTABLE=100
 ```
 
@@ -143,3 +153,70 @@ El servidor crea un evento en `josue.arce.gonzalez@gmail.com` cuando el formular
 6. Registra una cita de prueba y confirma que el evento aparece y llega la notificación. Revisa spam y la configuración anterior si el correo no aparece.
 
 Para utilizar un calendario separado, créalo, compártelo con la cuenta de servicio y reemplaza `GOOGLE_CALENDAR_ID` por el ID que aparece en **Integrar calendario**. El endpoint valida los datos, utiliza la zona horaria `America/Costa_Rica` y responde con error sin registrar localmente la cita si Calendar no la confirma.
+
+### Diagnóstico de un error 502
+
+Los comandos deben usar el nombre y la región reales del servicio. Para este proyecto son `proyectocardetailing` y `us-west1`; consultar `estudio-auto` en `us-central1` no mostrará los logs del servicio desplegado.
+
+```bash
+gcloud run services logs read proyectocardetailing \
+  --region=us-west1 \
+  --project="$PROJECT_ID" \
+  --limit=100
+
+gcloud run services describe proyectocardetailing \
+  --region=us-west1 \
+  --project="$PROJECT_ID" \
+  --format='yaml(spec.template.spec.serviceAccountName,spec.template.spec.containers[0].env,status.url)'
+```
+
+La revisión debe usar `estudio-auto-calendar@TU_PROJECT_ID.iam.gserviceaccount.com` y definir `GOOGLE_CALENDAR_ID`. Si fue desplegada con la cuenta predeterminada, corrígela:
+
+```bash
+gcloud run services update proyectocardetailing \
+  --region=us-west1 \
+  --project="$PROJECT_ID" \
+  --service-account="estudio-auto-calendar@$PROJECT_ID.iam.gserviceaccount.com" \
+  --set-env-vars="GOOGLE_CALENDAR_ID=josue.arce.gonzalez@gmail.com"
+```
+
+Finalmente, comparte el calendario con exactamente la cuenta que muestra `serviceAccountName`. Los nuevos logs incluyen el código y motivo devueltos por Calendar para distinguir API deshabilitada, calendario inexistente o permisos insuficientes.
+
+## Correo y WhatsApp de confirmación
+
+Después de crear el evento, el servidor puede enviar un correo transaccional con Resend y un mensaje mediante WhatsApp Business Cloud API. Una falla de notificación no elimina la cita ni el evento de Calendar; queda registrada en los logs como `failed` o `skipped`.
+
+### Correo
+
+1. Crea una cuenta en Resend y verifica un dominio de envío.
+2. Genera una API key y define un remitente del dominio verificado, por ejemplo `Citas <citas@tudominio.cr>`.
+3. El correo se envía al cliente y a `josue.arce.gonzalez@gmail.com` con servicio, vehículo, fecha, hora y costo.
+
+### WhatsApp
+
+Necesitas una cuenta de Meta Business, una aplicación con WhatsApp, un número de WhatsApp Business, su **Phone Number ID** y un token. Para notificar automáticamente fuera de una conversación iniciada por el cliente, Meta requiere una plantilla aprobada y consentimiento del cliente. El formulario incluye una aceptación opcional; si el cliente no la marca, el servidor no envía WhatsApp.
+
+Crea una plantilla en español con cinco variables de cuerpo, en este orden:
+
+```text
+Hola {{1}}, tu cita de detallado fue registrada.
+Servicio: {{2}}
+Fecha: {{3}}
+Hora: {{4}}
+Vehículo: {{5}}
+```
+
+Cuando ambos proveedores estén listos, configura Secret Manager y Cloud Run desde una terminal segura:
+
+```bash
+export PROJECT_ID="tu-id-de-proyecto"
+export RESEND_API_KEY="re_..."
+export EMAIL_FROM="Citas <citas@tudominio.cr>"
+export WHATSAPP_ACCESS_TOKEN="..."
+export WHATSAPP_PHONE_NUMBER_ID="..."
+export WHATSAPP_TEMPLATE_NAME="cita_registrada"
+./GCP-infra/configure-notifications.sh
+```
+
+El script guarda los tokens como secretos, concede acceso únicamente a la cuenta de servicio de Cloud Run y crea una revisión con la configuración. El pipeline usa `--update-env-vars`, por lo que los siguientes despliegues conservan estos secretos y variables. Nunca agregues esos valores a Git, `cloudbuild.yaml` o archivos `.env` compartidos.
+

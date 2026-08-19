@@ -2,7 +2,7 @@
 set -eu
 
 PROJECT_ID="${PROJECT_ID:?Define PROJECT_ID con el ID de tu proyecto de GCP}"
-REGION="${REGION:-us-central1}"
+REGION="${REGION:-us-west1}"
 GITHUB_OWNER="${GITHUB_OWNER:-JosueArce}"
 GITHUB_REPO="${GITHUB_REPO:-proyectocardetailing}"
 TRIGGER_NAME="${TRIGGER_NAME:-deploy-main-cloud-run}"
