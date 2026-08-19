@@ -145,7 +145,9 @@ tmp/{uploadId}/...
 
 ## Crear recursos
 
+
 Estos recursos **no se crean al desplegar una revisión de Cloud Run**. La aplicación no debe crear infraestructura durante su arranque. Se preparan una sola vez ejecutando `setup.sh`; después, las revisiones nuevas reutilizan la misma base de datos y el mismo bucket. El script es idempotente, por lo que se puede volver a ejecutar sin duplicarlos.
+
 
 Desde la raíz:
 
@@ -157,7 +159,9 @@ export REGION="us-west1"
 
 El script es idempotente, crea Firestore solo si no existe, crea un bucket privado, aplica ciclo de vida y asigna permisos a la cuenta de Cloud Run.
 
+
 Puedes ejecutarlo desde **Cloud Shell** o desde una Mac con `gcloud` autenticado. Cloud Build tampoco lo ejecuta en cada merge: `cloudbuild.yaml` solamente construye y despliega la aplicación, evitando que la cuenta del pipeline necesite permisos administrativos permanentes para crear bases de datos o modificar IAM.
+
 
 ## Desplegar índices y reglas
 

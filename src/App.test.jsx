@@ -23,6 +23,7 @@ describe('sitio de detallado automotriz', () => {
     expect(within(dialog).getByRole('radio', { name: /tarjeta/i })).toBeDisabled()
     const receipt = new File(['receipt'], 'comprobante.pdf', { type: 'application/pdf' })
     await user.upload(within(dialog).getByLabelText(/comprobante sinpe/i), receipt)
+
     await waitFor(() => expect(within(dialog).getByText(/comprobante\.pdf/)).toBeInTheDocument())
   })
 
