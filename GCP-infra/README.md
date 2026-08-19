@@ -20,7 +20,6 @@ El script habilita Cloud Run, Cloud Build y Artifact Registry; crea el repositor
 También puedes desplegar directamente desde el código fuente. Cloud Build detectará el `Dockerfile` de la raíz:
 
 ```bash
-
 gcloud run deploy proyectocardetailing \
   --source . \
   --region us-west1 \
@@ -104,7 +103,6 @@ En el trigger de `develop`, sobrescribe `_SERVICE=proyectocardetailing-staging`.
 Cloud Run conserva revisiones anteriores. Para regresar todo el tráfico a una revisión estable:
 
 ```bash
-
 gcloud run revisions list --service proyectocardetailing --region us-west1
 gcloud run services update-traffic estudio-auto \
   --region us-west1 \
@@ -173,6 +171,21 @@ gcloud run services update proyectocardetailing \
 ```
 
 Finalmente, comparte el calendario con exactamente la cuenta que muestra `serviceAccountName`. Los nuevos logs incluyen el código y motivo devueltos por Calendar para distinguir API deshabilitada, calendario inexistente o permisos insuficientes.
+
+### La revisión no escucha en `PORT=8080`
+
+Este mensaje corresponde al arranque del contenedor, no a Firestore ni a Cloud Storage. La imagen escucha automáticamente la variable `PORT`; además, Calendar se carga bajo demanda para reducir el consumo durante el inicio. En la captura del servicio el límite es **128 MiB**, mientras que el pipeline del repositorio configura **256 MiB**. Actualiza la revisión a 256 MiB y vuelve a desplegar:
+
+```bash
+gcloud run services update proyectocardetailing \
+  --region=us-west1 \
+  --project="$PROJECT_ID" \
+  --memory=256Mi \
+  --port=8080
+```
+
+Después consulta los logs de la revisión fallida; la línea `Estudio Auto escuchando en el puerto 8080` confirma que el proceso inició correctamente. Si despliegas con el trigger de `GCP-infra/cloudbuild.yaml`, esta memoria y el puerto ya se aplican automáticamente.
+
 
 ## Correo y WhatsApp de confirmación
 

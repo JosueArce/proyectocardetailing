@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 
@@ -23,7 +23,8 @@ describe('sitio de detallado automotriz', () => {
     expect(within(dialog).getByRole('radio', { name: /tarjeta/i })).toBeDisabled()
     const receipt = new File(['receipt'], 'comprobante.pdf', { type: 'application/pdf' })
     await user.upload(within(dialog).getByLabelText(/comprobante sinpe/i), receipt)
-    expect(within(dialog).getByText(/comprobante\.pdf/)).toBeInTheDocument()
+
+    await waitFor(() => expect(within(dialog).getByText(/comprobante\.pdf/)).toBeInTheDocument())
   })
 
   it('registra una cita y permite gestionarla desde el panel', async () => {
@@ -54,6 +55,8 @@ describe('sitio de detallado automotriz', () => {
     await user.type(within(login).getByLabelText(/contraseña/i), 'admin123')
     await user.click(within(login).getByRole('button', { name: 'Ingresar' }))
     const admin = screen.getByText('PANEL DE ADMINISTRACIÓN').closest('section')
+    expect(within(admin).getByText('✓ Firestore conectado')).toBeInTheDocument()
+    expect(within(admin).getByText(/Storage: test-evidence/)).toBeInTheDocument()
     fireEvent.change(within(admin).getByLabelText('Mes a consultar'), { target: { value: '2030-05' } })
     expect(within(admin).getByText('Sofía Méndez')).toBeInTheDocument()
     expect(within(admin).getByText('Mazda 3 2024')).toBeInTheDocument()

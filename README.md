@@ -14,7 +14,9 @@ El cliente y Josue reciben correo al registrar la cita y también cuando adminis
 
 El formulario permite seleccionar **SINPE Móvil** o **efectivo**. SINPE solicita un comprobante y ambas opciones mantienen la cita pendiente hasta la revisión administrativa; el pago con tarjeta ya aparece como una opción visual deshabilitada. Administración registra el pago antes de poder terminar el servicio. Antes de desplegar, reemplaza `_SINPE_PHONE` en `GCP-infra/cloudbuild.yaml` por el número real que se mostrará públicamente.
 
-La arquitectura económica de persistencia propuesta utiliza Firestore Native para datos y un bucket privado de Cloud Storage para comprobantes y evidencias. Los scripts, reglas, índices y diagramas están en [`GCP-infra/storage/`](GCP-infra/storage/README.md). Esta infraestructura está preparada, pero el prototipo todavía conserva los datos y solamente el nombre del comprobante en el navegador hasta implementar los endpoints de carga y repositorios de Firestore.
+La persistencia utiliza Firestore Native para reservaciones y un bucket privado de Cloud Storage para comprobantes SINPE. El panel administrativo obtiene las citas desde Firestore. Los scripts, reglas, índices, diagramas y pasos de verificación están en [`GCP-infra/storage/`](GCP-infra/storage/README.md). Cuentas, vehículos, gastos y bloqueos todavía permanecen en `localStorage` y serán la siguiente migración.
+
+Firestore y el bucket no se crean durante cada deploy. Se preparan una sola vez con `./GCP-infra/storage/setup.sh`; las siguientes revisiones de Cloud Run reutilizan esos recursos.
 
 El despliegue continuo de `main` se crea con `GCP-infra/create-trigger.sh`: cada merge aprobado genera una imagen identificada por el SHA del commit y una nueva revisión de Cloud Run.
 

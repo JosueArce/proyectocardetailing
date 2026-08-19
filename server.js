@@ -1,8 +1,9 @@
 import express from 'express'
-import { google } from 'googleapis'
+
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import crypto from 'node:crypto'
+import { Readable } from 'node:stream'
 import { sendBookingNotifications, sendBookingUpdateEmail } from './notifications.js'
 
 const app = express()
@@ -14,8 +15,70 @@ const requiredFields = ['name', 'phone', 'email', 'vehicle', 'service', 'date', 
 const adminEmail = process.env.ADMIN_EMAIL || 'admin@estudioauto.com'
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
 const sessionSecret = process.env.SESSION_SECRET || 'development-only-change-me'
+
+// googleapis es una dependencia grande. Se carga solo cuando una petición necesita
+// Calendar para que una instancia de Cloud Run con poca memoria pueda iniciar y
+// escuchar PORT inmediatamente.
+const getCalendar = async () => {
+  const { google } = await import('googleapis')
+  const auth = new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/calendar'] })
+  return google.calendar({ version: 'v3', auth })
+}
+
+const getGoogleServices = async () => {
+  const { google } = await import('googleapis')
+  const auth = new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] })
+  const projectId = await auth.getProjectId()
+  return { projectId, firestore: google.firestore({ version: 'v1', auth }), storage: google.storage({ version: 'v1', auth }) }
+}
+
+const toFirestoreValue = value => {
+  if (value === null || value === undefined) return { nullValue: null }
+  if (Array.isArray(value)) return { arrayValue: { values: value.map(toFirestoreValue) } }
+  if (typeof value === 'object') return { mapValue: { fields: Object.fromEntries(Object.entries(value).map(([key, item]) => [key, toFirestoreValue(item)])) } }
+  if (typeof value === 'boolean') return { booleanValue: value }
+  if (typeof value === 'number') return Number.isInteger(value) ? { integerValue: String(value) } : { doubleValue: value }
+  return { stringValue: String(value) }
+}
+const fromFirestoreValue = value => {
+  if ('nullValue' in value) return null
+  if ('arrayValue' in value) return (value.arrayValue.values || []).map(fromFirestoreValue)
+  if ('mapValue' in value) return Object.fromEntries(Object.entries(value.mapValue.fields || {}).map(([key, item]) => [key, fromFirestoreValue(item)]))
+  if ('booleanValue' in value) return value.booleanValue
+  if ('integerValue' in value) return Number(value.integerValue)
+  if ('doubleValue' in value) return value.doubleValue
+  return value.stringValue
+}
+const toFirestoreFields = record => Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined).map(([key, value]) => [key, toFirestoreValue(value)]))
+const fromFirestoreDocument = document => ({ id: document.name.split('/').pop(), ...Object.fromEntries(Object.entries(document.fields || {}).map(([key, value]) => [key, fromFirestoreValue(value)])) })
+
+const saveBooking = async (booking, create = false) => {
+  const { projectId, firestore } = await getGoogleServices()
+  const parent = `projects/${projectId}/databases/(default)/documents`
+  if (!create) {
+    const result = await firestore.projects.databases.documents.patch({ name: `${parent}/bookings/${booking.id}`, requestBody: { fields: toFirestoreFields(booking) } })
+    return fromFirestoreDocument(result.data)
+  }
+  const result = await firestore.projects.databases.documents.createDocument({ parent, collectionId: 'bookings', documentId: booking.id, requestBody: { fields: toFirestoreFields(booking) } })
+  return fromFirestoreDocument(result.data)
+}
+
+const uploadReceipt = async (dataUrl, fileName, bookingId) => {
+  if (!dataUrl) return ''
+  const match = /^data:(image\/(?:jpeg|png|webp)|application\/pdf);base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl)
+  if (!match) throw new Error('El comprobante debe ser JPG, PNG, WEBP o PDF.')
+  const body = Buffer.from(match[2], 'base64')
+  if (body.length > 5 * 1024 * 1024) throw new Error('El comprobante supera el límite de 5 MB.')
+  const bucket = process.env.STORAGE_BUCKET
+  if (!bucket) throw new Error('STORAGE_BUCKET no está configurado.')
+  const { storage } = await getGoogleServices()
+  const objectName = `bookings/${bookingId}/payments/${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+  await storage.objects.insert({ bucket, name: objectName, uploadType: 'media', media: { mimeType: match[1], body: Readable.from(body) } })
+  return objectName
+}
+
 app.disable('x-powered-by')
-app.use(express.json({ limit: '32kb' }))
+app.use(express.json({ limit: '8mb' }))
 
 app.get('/health', (_request, response) => response.type('text').send('ok'))
 
@@ -37,6 +100,38 @@ app.post('/api/admin/login', (request, response) => {
   return response.json({ ok: true })
 })
 
+app.get('/api/admin/bookings', requireAdmin, async (_request, response) => {
+  try {
+    const { projectId, firestore } = await getGoogleServices()
+    const parent = `projects/${projectId}/databases/(default)/documents`
+    const result = await firestore.projects.databases.documents.list({ parent, collectionId: 'bookings', pageSize: 200, orderBy: 'createdAt desc' })
+    return response.json({ bookings: (result.data.documents || []).map(fromFirestoreDocument) })
+  } catch (error) {
+    console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudieron consultar las reservaciones', error: error.response?.data?.error || error.message }))
+    return response.status(502).json({ error: 'No fue posible consultar las reservaciones.' })
+  }
+})
+
+app.get('/api/admin/system-status', requireAdmin, async (_request, response) => {
+  const checks = { firestore: { ok: false }, storage: { ok: false } }
+  try {
+    const { projectId, firestore, storage } = await getGoogleServices()
+    const parent = `projects/${projectId}/databases/(default)/documents`
+    const documents = await firestore.projects.databases.documents.list({ parent, collectionId: 'bookings', pageSize: 1 })
+    checks.firestore = { ok: true, projectId, bookingsDetected: (documents.data.documents || []).length > 0 }
+    const bucket = process.env.STORAGE_BUCKET
+    if (!bucket) checks.storage = { ok: false, error: 'STORAGE_BUCKET no está configurado' }
+    else {
+      await storage.buckets.get({ bucket })
+      checks.storage = { ok: true, bucket }
+    }
+  } catch (error) {
+    const message = error.response?.data?.error?.message || error.message
+    if (!checks.firestore.ok) checks.firestore.error = message
+    else checks.storage.error = message
+  }
+  return response.status(checks.firestore.ok && checks.storage.ok ? 200 : 503).json(checks)
+})
 
 app.post('/api/bookings', async (request, response) => {
   const booking = request.body || {}
@@ -48,14 +143,14 @@ app.post('/api/bookings', async (request, response) => {
   }
   if (!serviceCatalog[booking.service]) return response.status(400).json({ error: 'El servicio seleccionado no es válido.' })
   if (!['sinpe', 'cash'].includes(booking.paymentMethod)) return response.status(400).json({ error: 'El método de pago no es válido.' })
-  if (booking.paymentMethod === 'sinpe' && !booking.paymentEvidenceName) return response.status(400).json({ error: 'Debes adjuntar el comprobante de SINPE Móvil.' })
+  if (booking.paymentMethod === 'sinpe' && (!booking.paymentEvidenceName || !booking.paymentEvidenceData)) return response.status(400).json({ error: 'Debes adjuntar el comprobante de SINPE Móvil.' })
 
+  let stage = 'calendar'
   try {
-    const auth = new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/calendar'] })
-    const calendar = google.calendar({ version: 'v3', auth })
+    const calendar = await getCalendar()
     const start = new Date(`${booking.date}T${booking.time}:00-06:00`)
     const { duration, cost } = serviceCatalog[booking.service]
-    const confirmedBooking = { ...booking, cost, paymentStatus: 'Pendiente' }
+    const confirmedBooking = { ...booking, id: crypto.randomUUID(), cost, status: 'Pendiente', paymentStatus: 'Pendiente', createdAt: new Date().toISOString() }
     const end = new Date(start.getTime() + duration * 60_000)
     const event = await calendar.events.insert({
       calendarId,
@@ -66,13 +161,21 @@ app.post('/api/bookings', async (request, response) => {
         end: { dateTime: end.toISOString(), timeZone },
       },
     })
-    const notifications = await sendBookingNotifications(confirmedBooking)
+    confirmedBooking.calendarEventId = event.data.id
+    stage = 'storage'
+    if (booking.paymentMethod === 'sinpe') confirmedBooking.paymentEvidencePath = await uploadReceipt(booking.paymentEvidenceData, booking.paymentEvidenceName, confirmedBooking.id)
+    delete confirmedBooking.paymentEvidenceData
+    stage = 'firestore'
+    const storedBooking = await saveBooking(confirmedBooking, true)
+    stage = 'notifications'
+    const notifications = await sendBookingNotifications(storedBooking)
     console.log(JSON.stringify({ severity: 'INFO', message: 'Notificaciones de reservación procesadas', eventId: event.data.id, notifications }))
-    return response.status(201).json({ eventId: event.data.id, htmlLink: event.data.htmlLink, notifications, paymentStatus: confirmedBooking.paymentStatus })
+    return response.status(201).json({ booking: storedBooking, eventId: event.data.id, htmlLink: event.data.htmlLink, notifications, paymentStatus: storedBooking.paymentStatus })
   } catch (error) {
-    const calendarError = error.response?.data?.error || error.errors || error.message
-    console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudo crear el evento de Google Calendar', calendarId, calendarError }))
-    return response.status(502).json({ error: 'No fue posible confirmar la cita en el calendario. Intenta nuevamente.' })
+    const detail = error.response?.data?.error || error.errors || error.message
+    console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudo completar la reservación', stage, calendarId, detail }))
+    const errors = { calendar: 'No fue posible crear la cita en Calendar.', storage: 'No fue posible guardar el comprobante en Cloud Storage.', firestore: 'No fue posible guardar la cita en Firestore.', notifications: 'La cita se guardó, pero falló el envío de notificaciones.' }
+    return response.status(502).json({ error: `${errors[stage]} Revisa el diagnóstico administrativo.` })
   }
 })
 
@@ -83,8 +186,7 @@ app.post('/api/booking-updates', requireAdmin, async (request, response) => {
   if (changes.status === 'Completada' && updatedBooking.paymentStatus !== 'Pagado') return response.status(400).json({ error: 'Debes registrar el pago antes de completar la cita.' })
   try {
     if (booking.calendarEventId) {
-      const auth = new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/calendar'] })
-      const calendar = google.calendar({ version: 'v3', auth })
+      const calendar = await getCalendar()
       if (changes.status === 'Cancelada') await calendar.events.delete({ calendarId, eventId: booking.calendarEventId })
       else {
         const start = new Date(`${updatedBooking.date}T${updatedBooking.time}:00-06:00`)
@@ -93,9 +195,10 @@ app.post('/api/booking-updates', requireAdmin, async (request, response) => {
         await calendar.events.patch({ calendarId, eventId: booking.calendarEventId, requestBody: { description: [`Estado: ${updatedBooking.status}`, `Cliente: ${updatedBooking.name}`, `Teléfono: ${updatedBooking.phone}`, `Vehículo: ${updatedBooking.vehicle}`, `Servicio: ${updatedBooking.service}`, updatedBooking.workDone ? `Trabajo realizado: ${updatedBooking.workDone}` : ''].filter(Boolean).join('\n'), start: { dateTime: start.toISOString(), timeZone }, end: { dateTime: end.toISOString(), timeZone } } })
       }
     }
-    const notification = await sendBookingUpdateEmail(updatedBooking, changeLabel)
+    const storedBooking = await saveBooking(updatedBooking)
+    const notification = await sendBookingUpdateEmail(storedBooking, changeLabel)
     console.log(JSON.stringify({ severity: 'INFO', message: 'Actualización de cita notificada', bookingId: booking.id, changeLabel, notification }))
-    return response.json({ booking: updatedBooking, notification })
+    return response.json({ booking: storedBooking, notification })
   } catch (error) {
     console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudo actualizar o notificar la cita', bookingId: booking.id, error: error.response?.data?.error || error.message }))
     return response.status(502).json({ error: 'No fue posible actualizar y notificar la cita.' })

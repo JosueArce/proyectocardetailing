@@ -1,7 +1,6 @@
 # Etapa de compilación: instala dependencias, ejecuta pruebas y genera /dist.
 FROM node:22-alpine AS build
 WORKDIR /app
-
 ARG VITE_SINPE_PHONE="+506 0000-0000"
 ENV VITE_SINPE_PHONE=$VITE_SINPE_PHONE
 
@@ -20,7 +19,6 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json server.js notifications.js ./
-
 
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

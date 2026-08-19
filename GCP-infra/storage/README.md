@@ -145,6 +145,10 @@ tmp/{uploadId}/...
 
 ## Crear recursos
 
+
+Estos recursos **no se crean al desplegar una revisión de Cloud Run**. La aplicación no debe crear infraestructura durante su arranque. Se preparan una sola vez ejecutando `setup.sh`; después, las revisiones nuevas reutilizan la misma base de datos y el mismo bucket. El script es idempotente, por lo que se puede volver a ejecutar sin duplicarlos.
+
+
 Desde la raíz:
 
 ```bash
@@ -155,6 +159,10 @@ export REGION="us-west1"
 
 El script es idempotente, crea Firestore solo si no existe, crea un bucket privado, aplica ciclo de vida y asigna permisos a la cuenta de Cloud Run.
 
+
+Puedes ejecutarlo desde **Cloud Shell** o desde una Mac con `gcloud` autenticado. Cloud Build tampoco lo ejecuta en cada merge: `cloudbuild.yaml` solamente construye y despliega la aplicación, evitando que la cuenta del pipeline necesite permisos administrativos permanentes para crear bases de datos o modificar IAM.
+
+
 ## Desplegar índices y reglas
 
 Los archivos `firestore.rules` y `firestore.indexes.json` están listos para Firebase CLI cuando se conecte el proyecto:
@@ -164,7 +172,24 @@ firebase use "$PROJECT_ID"
 firebase deploy --config GCP-infra/storage/firebase.json --only firestore:rules,firestore:indexes
 ```
 
-Antes de producción falta implementar en el servidor los repositorios de Firestore, endpoints de URL firmada, validación de uploads, migración desde `localStorage` y pruebas de integración. La UI actual conserva únicamente el nombre del comprobante; no sube todavía el archivo real.
+La reservación ya se guarda en la colección `bookings`, el panel administrativo obtiene esa colección y los comprobantes SINPE se cargan al bucket privado. En esta primera integración el archivo viaja al servidor codificado en base64 y tiene un límite de 5 MB. Antes de producción conviene sustituir este transporte por URLs firmadas, migrar cuentas/vehículos/gastos/bloqueos desde `localStorage` y agregar autenticación persistente para que el cliente consulte su historial desde cualquier dispositivo.
+
+## Verificar la integración desde el sitio
+
+1. Despliega una revisión que defina `STORAGE_BUCKET`; el pipeline ya usa `${PROJECT_ID}-estudio-auto-evidence`.
+2. Crea una cita de prueba, preferiblemente con un comprobante pequeño.
+3. En Firestore, abre `bookings`: debe aparecer un documento con `calendarEventId`, `status` y `paymentStatus`.
+4. En Cloud Storage, busca `bookings/{id}/payments/`: allí debe estar el comprobante.
+5. Cierra el navegador, abre el panel administrativo e inicia sesión. El panel consulta `/api/admin/bookings` y debe mostrar el documento guardado, aunque `localStorage` esté vacío.
+6. En la parte superior del panel, **Conexión GCP** debe mostrar en verde `Firestore conectado` y el nombre exacto del bucket. Si aparece rojo, el mismo indicador muestra la variable o permiso que falta.
+
+También puedes comprobarlo desde Cloud Shell:
+
+```bash
+curl -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  "https://firestore.googleapis.com/v1/projects/$PROJECT_ID/databases/(default)/documents/bookings?pageSize=10"
+gcloud storage ls "gs://$PROJECT_ID-estudio-auto-evidence/bookings/**"
+```
 
 ## Control de costos
 
