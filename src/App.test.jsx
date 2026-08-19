@@ -1,0 +1,98 @@
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import App from './App'
+
+describe('sitio de detallado automotriz', () => {
+  it('presenta los servicios y sus precios', () => {
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Esencial' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Signature' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Ceramic Pro' })).toBeInTheDocument()
+    expect(screen.getByText('₡60.000')).toBeInTheDocument()
+  })
+
+  it('registra una cita y permite gestionarla desde el panel', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
+    const dialog = screen.getByRole('dialog')
+    await user.type(within(dialog).getByLabelText(/nombre completo/i), 'Sofía Méndez')
+    await user.type(within(dialog).getByLabelText(/teléfono/i), '88881234')
+    await user.type(within(dialog).getByLabelText(/correo/i), 'sofia@example.com')
+    await user.type(within(dialog).getByLabelText(/vehículo/i), 'Mazda 3 2024')
+    await user.type(within(dialog).getByLabelText(/fecha/i), '2030-05-20')
+    await user.selectOptions(within(dialog).getByLabelText(/hora/i), '11:00')
+    await user.click(within(dialog).getByRole('button', { name: /solicitar reservación/i }))
+
+    expect(within(dialog).getByRole('heading', { name: /gracias, sofía/i })).toBeInTheDocument()
+    const storedBookings = JSON.parse(localStorage.getItem('detail-bookings'))
+    expect(storedBookings).toHaveLength(1)
+    expect(storedBookings[0].cost).toBe(60000)
+    expect(fetch).toHaveBeenCalledWith('/api/bookings', expect.objectContaining({ method: 'POST' }))
+
+    await user.click(within(dialog).getByRole('button', { name: 'Listo' }))
+    await user.click(screen.getByRole('button', { name: 'Administrar' }))
+    const login = screen.getByRole('dialog')
+    await user.type(within(login).getByLabelText(/correo/i), 'admin@estudioauto.com')
+    await user.type(within(login).getByLabelText(/contraseña/i), 'admin123')
+    await user.click(within(login).getByRole('button', { name: 'Ingresar' }))
+    const admin = screen.getByText('PANEL DE ADMINISTRACIÓN').closest('section')
+    fireEvent.change(within(admin).getByLabelText('Mes a consultar'), { target: { value: '2030-05' } })
+    expect(within(admin).getByText('Sofía Méndez')).toBeInTheDocument()
+    expect(within(admin).getByText('Mazda 3 2024')).toBeInTheDocument()
+    expect(within(admin).getByRole('link', { name: /whatsapp/i })).toHaveAttribute('href', expect.stringContaining('88881234'))
+  })
+
+  it('muestra el estado vacío del panel cuando no hay citas', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Administrar' }))
+    const login = screen.getByRole('dialog')
+    await user.type(within(login).getByLabelText(/correo/i), 'admin@estudioauto.com')
+    await user.type(within(login).getByLabelText(/contraseña/i), 'admin123')
+    await user.click(within(login).getByRole('button', { name: 'Ingresar' }))
+    expect(screen.getByText('No hay citas para este mes.')).toBeInTheDocument()
+  })
+
+  it('permite crear una cuenta opcional y registrar varios vehículos', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    expect(screen.getAllByRole('button', { name: /reservar mi cita/i })[0]).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Mi cuenta' }))
+    const access = screen.getByRole('dialog')
+    await user.click(within(access).getByRole('button', { name: 'Registrarme' }))
+    await user.type(within(access).getByLabelText(/nombre completo/i), 'Ana López')
+    await user.type(within(access).getByLabelText(/teléfono/i), '88889999')
+    await user.type(within(access).getByLabelText(/correo/i), 'ana@example.com')
+    await user.type(within(access).getByLabelText(/contraseña/i), 'secreto1')
+    await user.click(within(access).getByRole('button', { name: 'Crear cuenta' }))
+    await user.click(screen.getByRole('button', { name: 'Hola, Ana' }))
+    const portal = screen.getByRole('dialog')
+    await user.type(within(portal).getByLabelText('Marca'), 'Toyota')
+    await user.type(within(portal).getByLabelText('Modelo'), 'RAV4')
+    await user.type(within(portal).getByLabelText('Año'), '2023')
+    await user.click(within(portal).getByRole('button', { name: /agregar vehículo/i }))
+    expect(within(portal).getByText('Toyota RAV4')).toBeInTheDocument()
+  })
+
+  it('impide reservar una fecha bloqueada por administración', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Administrar' }))
+    let dialog = screen.getByRole('dialog')
+    await user.type(within(dialog).getByLabelText(/correo/i), 'admin@estudioauto.com')
+    await user.type(within(dialog).getByLabelText(/contraseña/i), 'admin123')
+    await user.click(within(dialog).getByRole('button', { name: 'Ingresar' }))
+    dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Fecha a bloquear'), { target: { value: '2030-06-15' } })
+    await user.click(within(dialog).getByRole('button', { name: 'Bloquear' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Cerrar' }))
+    await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
+    dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Fecha'), { target: { value: '2030-06-15' } })
+    expect(within(dialog).getByText('Esta fecha no está disponible.')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /solicitar reservación/i })).toBeDisabled()
+  })
+})
