@@ -4,6 +4,7 @@ Landing page responsiva para un negocio de detallado automotriz. Incluye servici
 
 El prototipo está localizado para Costa Rica: precios, ingresos, gastos y ganancias se presentan en colones costarricenses (CRC). La historia de marca identifica a Josue Arce, de 29 años, como fundador del proyecto.
 
+
 Las reservaciones se conectan con Google Calendar mediante el servidor de Cloud Run y generan una notificación para Josue. La configuración inicial de permisos está documentada en [`GCP-infra/README.md`](GCP-infra/README.md#integración-con-google-calendar).
 
 El despliegue continuo de `main` se crea con `GCP-infra/create-trigger.sh`: cada merge aprobado genera una imagen identificada por el SHA del commit y una nueva revisión de Cloud Run.
