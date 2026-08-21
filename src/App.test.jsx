@@ -27,7 +27,7 @@ describe('sitio de detallado automotriz', () => {
   })
 
   it('presenta errores de comprobante en lenguaje útil para el cliente', async () => {
-    fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.' }) })
+    fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Sin sesión' }) }).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.' }) })
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
@@ -115,12 +115,19 @@ describe('sitio de detallado automotriz', () => {
     await user.type(within(access).getByLabelText(/correo/i), 'ana@example.com')
     await user.type(within(access).getByLabelText(/contraseña/i), 'secreto1')
     await user.click(within(access).getByRole('button', { name: 'Crear cuenta' }))
-    await user.click(screen.getByRole('button', { name: 'Hola, Ana' }))
+
+    expect(fetch).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({ method: 'POST' }))
+    expect(localStorage.getItem('detail-accounts')).toBeNull()
+    await user.click(await screen.findByRole('button', { name: 'Hola, Ana' }))
+
     const portal = screen.getByRole('dialog')
     await user.type(within(portal).getByLabelText('Marca'), 'Toyota')
     await user.type(within(portal).getByLabelText('Modelo'), 'RAV4')
     await user.type(within(portal).getByLabelText('Año'), '2023')
     await user.click(within(portal).getByRole('button', { name: /agregar vehículo/i }))
+
+    expect(fetch).toHaveBeenCalledWith('/api/vehicles', expect.objectContaining({ method: 'POST' }))
+
     expect(within(portal).getByText('Toyota RAV4')).toBeInTheDocument()
   })
 
@@ -144,12 +151,12 @@ describe('sitio de detallado automotriz', () => {
   })
 
   it('permite al cliente abrir una cita histórica y ver sus evidencias', async () => {
-    localStorage.setItem('detail-session', JSON.stringify({ id: 1, name: 'Ana López', email: 'ana@example.com', phone: '88889999', role: 'client', cars: [] }))
-    localStorage.setItem('detail-accounts', JSON.stringify([{ id: 1, name: 'Ana López', email: 'ana@example.com', phone: '88889999', role: 'client', cars: [] }]))
-    localStorage.setItem('detail-bookings', JSON.stringify([{ id: 2, name: 'Ana López', email: 'ana@example.com', phone: '88889999', vehicle: 'Toyota RAV4', service: 'Signature', date: '2025-02-10', time: '09:00', cost: 60000, status: 'Completada', workDone: 'Descontaminación y cera premium.', evidence: [{ id: 3, type: 'image', url: 'https://example.com/final.jpg', label: 'Resultado final' }] }]))
+    const historical = { id: 2, name: 'Ana López', email: 'ana@example.com', phone: '88889999', vehicle: 'Toyota RAV4', service: 'Signature', date: '2025-02-10', time: '09:00', cost: 60000, status: 'Completada', workDone: 'Descontaminación y cera premium.', evidence: [{ id: 3, type: 'image', url: 'https://example.com/final.jpg', label: 'Resultado final' }] }
+    fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ account: { id: 'customer-test', name: 'Ana López', email: 'ana@example.com', phone: '88889999', role: 'customer', cars: [] }, bookings: [historical] }) })
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: 'Hola, Ana' }))
+    await user.click(await screen.findByRole('button', { name: 'Hola, Ana' }))
+
     const portal = screen.getByRole('dialog')
     await user.click(within(portal).getByRole('button', { name: /abrir detalle de signature/i }))
     expect(screen.getByText('Descontaminación y cera premium.')).toBeInTheDocument()

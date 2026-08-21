@@ -14,6 +14,9 @@ const adminEmail = process.env.ADMIN_EMAIL || 'admin@estudioauto.com'
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
 const sessionSecret = process.env.SESSION_SECRET || 'development-only-change-me'
 
+const firebaseApiKey = process.env.FIREBASE_WEB_API_KEY || ''
+
+
 // googleapis es una dependencia grande. Se carga solo cuando una petición necesita
 // Calendar para que una instancia de Cloud Run con poca memoria pueda iniciar y
 // escuchar PORT inmediatamente.
@@ -61,6 +64,34 @@ const saveBooking = async (booking, create = false) => {
   return fromFirestoreDocument(result.data)
 }
 
+const documentPath = (projectId, collection, id) => `projects/${projectId}/databases/(default)/documents/${collection}/${id}`
+const saveDocument = async (collection, id, data, create = false) => {
+  const { projectId, firestore } = await getGoogleServices()
+  const requestBody = { fields: toFirestoreFields(data) }
+  const result = create
+    ? await firestore.projects.databases.documents.createDocument({ parent: `projects/${projectId}/databases/(default)/documents`, collectionId: collection, documentId: id, requestBody })
+    : await firestore.projects.databases.documents.patch({ name: documentPath(projectId, collection, id), requestBody })
+  return fromFirestoreDocument(result.data)
+}
+const getDocument = async (collection, id) => {
+  const { projectId, firestore } = await getGoogleServices()
+  const result = await firestore.projects.databases.documents.get({ name: documentPath(projectId, collection, id) })
+  return fromFirestoreDocument(result.data)
+}
+const listCollection = async collection => {
+  const { projectId, firestore } = await getGoogleServices()
+  const result = await firestore.projects.databases.documents.list({ parent: `projects/${projectId}/databases/(default)/documents`, collectionId: collection, pageSize: 500 })
+  return (result.data.documents || []).map(fromFirestoreDocument)
+}
+
+const firebaseAuth = async (action, body) => {
+  if (!firebaseApiKey) throw new Error('Firebase Authentication no está configurado.')
+  const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:${action}?key=${firebaseApiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  const result = await response.json()
+  if (!response.ok) throw new Error(result.error?.message || 'No fue posible autenticar la cuenta.')
+  return result
+}
+
 const uploadReceipt = async (dataUrl, fileName, bookingId) => {
   if (!dataUrl) return ''
   const match = /^data:(image\/(?:jpeg|png|webp)|application\/pdf);base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl)
@@ -98,8 +129,27 @@ app.use(express.json({ limit: '8mb' }))
 app.get('/health', (_request, response) => response.type('text').send('ok'))
 
 const signSession = value => crypto.createHmac('sha256', sessionSecret).update(value).digest('hex')
+const getCookie = (request, name) => request.headers.cookie?.split(';').map(value => value.trim()).find(value => value.startsWith(`${name}=`))?.slice(name.length + 1)
+const readCustomerSession = request => {
+  const cookie = getCookie(request, 'customer_session')
+  if (!cookie) return null
+  const [uid, expires, signature] = decodeURIComponent(cookie).split('.')
+  const expected = signSession(`${uid}.${expires}`)
+  if (!uid || !signature || Number(expires) < Date.now() || signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null
+  return uid
+}
+const setCustomerSession = (response, uid) => {
+  const expires = String(Date.now() + 30 * 24 * 60 * 60 * 1000)
+  const value = `${uid}.${expires}`
+  response.setHeader('Set-Cookie', `customer_session=${encodeURIComponent(`${value}.${signSession(value)}`)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`)
+}
+const requireCustomer = (request, response, next) => {
+  request.customerId = readCustomerSession(request)
+  if (!request.customerId) return response.status(401).json({ error: 'Inicia sesión para continuar.' })
+  next()
+}
 const requireAdmin = (request, response, next) => {
-  const cookie = request.headers.cookie?.split(';').map(value => value.trim()).find(value => value.startsWith('admin_session='))?.split('=')[1]
+  const cookie = getCookie(request, 'admin_session')
   if (!cookie) return response.status(401).json({ error: 'Se requiere una sesión administrativa.' })
   const [expires, signature] = decodeURIComponent(cookie).split('.')
   const expected = signSession(expires)
@@ -113,6 +163,62 @@ app.post('/api/admin/login', (request, response) => {
   const token = encodeURIComponent(`${expires}.${signSession(expires)}`)
   response.setHeader('Set-Cookie', `admin_session=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=28800`)
   return response.json({ ok: true })
+})
+
+
+app.post('/api/auth/register', async (request, response) => {
+  const { name, email, phone, password } = request.body || {}
+  if (!name || !email || !phone || !password || password.length < 6) return response.status(400).json({ error: 'Completa todos los datos y usa una contraseña de al menos 6 caracteres.' })
+  try {
+    const identity = await firebaseAuth('signUp', { email, password, returnSecureToken: true })
+    const account = await saveDocument('users', identity.localId, { name, email: email.toLowerCase(), phone, role: 'customer', status: 'active', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, true)
+    setCustomerSession(response, identity.localId)
+    return response.status(201).json({ account: { ...account, cars: [] }, bookings: [] })
+  } catch (error) {
+    const duplicate = error.message.includes('EMAIL_EXISTS')
+    return response.status(duplicate ? 409 : 502).json({ error: duplicate ? 'Ya existe una cuenta con este correo.' : 'No pudimos crear tu cuenta en este momento.' })
+  }
+})
+
+app.post('/api/auth/login', async (request, response) => {
+  try {
+    const identity = await firebaseAuth('signInWithPassword', { email: request.body?.email, password: request.body?.password, returnSecureToken: true })
+    const account = await getDocument('users', identity.localId)
+    const vehicles = (await listCollection('vehicles')).filter(vehicle => vehicle.customerId === identity.localId)
+    const bookings = (await listCollection('bookings')).filter(booking => booking.customerId === identity.localId || booking.email?.toLowerCase() === account.email?.toLowerCase())
+    setCustomerSession(response, identity.localId)
+    return response.json({ account: { ...account, cars: vehicles }, bookings })
+  } catch {
+    return response.status(401).json({ error: 'Correo o contraseña incorrectos.' })
+  }
+})
+
+app.post('/api/auth/logout', (_request, response) => {
+  response.setHeader('Set-Cookie', 'customer_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0')
+  return response.json({ ok: true })
+})
+
+app.get('/api/auth/me', requireCustomer, async (request, response) => {
+  try {
+    const account = await getDocument('users', request.customerId)
+    const vehicles = (await listCollection('vehicles')).filter(vehicle => vehicle.customerId === request.customerId)
+    const bookings = (await listCollection('bookings')).filter(booking => booking.customerId === request.customerId || booking.email?.toLowerCase() === account.email?.toLowerCase())
+    return response.json({ account: { ...account, cars: vehicles }, bookings })
+  } catch {
+    return response.status(401).json({ error: 'Tu sesión ya no está disponible.' })
+  }
+})
+
+app.post('/api/vehicles', requireCustomer, async (request, response) => {
+  const { make, model, year, plate = '', color = '' } = request.body || {}
+  if (!make || !model || !/^\d{4}$/.test(String(year))) return response.status(400).json({ error: 'Completa marca, modelo y un año válido.' })
+  const id = crypto.randomUUID()
+  try {
+    const vehicle = await saveDocument('vehicles', id, { customerId: request.customerId, make, model, year: Number(year), plate: plate.toUpperCase(), color, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, true)
+    return response.status(201).json({ vehicle })
+  } catch {
+    return response.status(502).json({ error: 'No pudimos guardar el vehículo.' })
+  }
 })
 
 app.get('/api/admin/bookings', requireAdmin, async (_request, response) => {
@@ -148,6 +254,49 @@ app.get('/api/admin/system-status', requireAdmin, async (_request, response) => 
   return response.status(checks.firestore.ok && checks.storage.ok ? 200 : 503).json(checks)
 })
 
+app.get('/api/admin/operations', requireAdmin, async (_request, response) => {
+  try {
+    const [blockedDates, expenses] = await Promise.all([listCollection('blockedDates'), listCollection('expenses')])
+    return response.json({ blockedDates: blockedDates.map(item => item.date), expenses })
+  } catch {
+    return response.status(502).json({ error: 'No pudimos consultar la configuración operativa.' })
+  }
+})
+
+app.post('/api/admin/blocked-dates', requireAdmin, async (request, response) => {
+  const date = request.body?.date
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return response.status(400).json({ error: 'Selecciona una fecha válida.' })
+  try {
+    await saveDocument('blockedDates', date, { date, reason: request.body?.reason || '', createdAt: new Date().toISOString() }, true)
+    return response.status(201).json({ date })
+  } catch (error) {
+    if (error.response?.status === 409) return response.json({ date })
+    return response.status(502).json({ error: 'No pudimos bloquear la fecha.' })
+  }
+})
+
+app.delete('/api/admin/blocked-dates/:date', requireAdmin, async (request, response) => {
+  try {
+    const { projectId, firestore } = await getGoogleServices()
+    await firestore.projects.databases.documents.delete({ name: documentPath(projectId, 'blockedDates', request.params.date) })
+    return response.json({ ok: true })
+  } catch {
+    return response.status(502).json({ error: 'No pudimos desbloquear la fecha.' })
+  }
+})
+
+app.post('/api/admin/expenses', requireAdmin, async (request, response) => {
+  const { concept, amount, date } = request.body || {}
+  if (!concept || !(Number(amount) >= 0) || !/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return response.status(400).json({ error: 'Completa correctamente el gasto.' })
+  try {
+    const id = crypto.randomUUID()
+    const expense = await saveDocument('expenses', id, { concept, amount: Number(amount), date, month: date.slice(0, 7), createdAt: new Date().toISOString() }, true)
+    return response.status(201).json({ expense })
+  } catch {
+    return response.status(502).json({ error: 'No pudimos guardar el gasto.' })
+  }
+})
+
 app.post('/api/bookings', async (request, response) => {
   const booking = request.body || {}
   if (requiredFields.some(field => !String(booking[field] || '').trim())) {
@@ -160,12 +309,18 @@ app.post('/api/bookings', async (request, response) => {
   if (!['sinpe', 'cash'].includes(booking.paymentMethod)) return response.status(400).json({ error: 'El método de pago no es válido.' })
   if (booking.paymentMethod === 'sinpe' && (!booking.paymentEvidenceName || !booking.paymentEvidenceData)) return response.status(400).json({ error: 'Debes adjuntar el comprobante de SINPE Móvil.' })
 
-  let stage = booking.paymentMethod === 'sinpe' ? 'storage' : 'calendar'
+
+  let stage = 'availability'
   let uploadedReceipt = ''
   try {
     const { duration, cost } = serviceCatalog[booking.service]
-    const confirmedBooking = { ...booking, id: crypto.randomUUID(), cost, status: 'Pendiente', paymentStatus: 'Pendiente', createdAt: new Date().toISOString() }
+    const [existingBookings, blockedDates] = await Promise.all([listCollection('bookings'), listCollection('blockedDates')])
+    if (blockedDates.some(item => item.date === booking.date)) return response.status(409).json({ error: 'Esa fecha no está disponible. Elige otro día.' })
+    if (existingBookings.some(item => item.date === booking.date && item.time === booking.time && !['Cancelada', 'cancelled'].includes(item.status))) return response.status(409).json({ error: 'Ese horario acaba de ocuparse. Elige otra hora disponible.' })
+    const customerId = readCustomerSession(request)
+    const confirmedBooking = { ...booking, id: crypto.randomUUID(), customerId, cost, status: 'Pendiente', paymentStatus: 'Pendiente', createdAt: new Date().toISOString() }
     if (booking.paymentMethod === 'sinpe') {
+      stage = 'storage'
       uploadedReceipt = await uploadReceipt(booking.paymentEvidenceData, booking.paymentEvidenceName, confirmedBooking.id)
       confirmedBooking.paymentEvidencePath = uploadedReceipt
     }
@@ -196,6 +351,7 @@ app.post('/api/bookings', async (request, response) => {
     if (stage === 'calendar') await deleteReceipt(uploadedReceipt)
     const publicErrors = {
       calendar: 'No pudimos completar tu solicitud en este momento. Por favor intenta nuevamente.',
+      availability: 'No pudimos confirmar la disponibilidad en este momento. Por favor intenta nuevamente.',
       storage: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.',
       firestore: 'No pudimos guardar tu reservación en este momento. Por favor intenta nuevamente.',
       notifications: 'Tu cita quedó registrada, pero no pudimos enviar la confirmación. Josue se comunicará contigo.',

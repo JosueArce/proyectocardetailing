@@ -31,14 +31,11 @@ function App() {
   const [systemStatus, setSystemStatus] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [bookings, setBookings] = useState(() => JSON.parse(localStorage.getItem('detail-bookings') || '[]'))
-  const [accounts, setAccounts] = useState(() => JSON.parse(localStorage.getItem('detail-accounts') || '[]'))
-  const [currentAccount, setCurrentAccount] = useState(() => JSON.parse(localStorage.getItem('detail-session') || 'null'))
+  const [currentAccount, setCurrentAccount] = useState(null)
   const [blockedDates, setBlockedDates] = useState(() => JSON.parse(localStorage.getItem('detail-blocked-dates') || '[]'))
   const [expenses, setExpenses] = useState(() => JSON.parse(localStorage.getItem('detail-expenses') || '[]'))
 
   useEffect(() => { localStorage.setItem('detail-bookings', JSON.stringify(bookings)) }, [bookings])
-  useEffect(() => { localStorage.setItem('detail-accounts', JSON.stringify(accounts)) }, [accounts])
-  useEffect(() => { localStorage.setItem('detail-session', JSON.stringify(currentAccount)) }, [currentAccount])
   useEffect(() => { localStorage.setItem('detail-blocked-dates', JSON.stringify(blockedDates)) }, [blockedDates])
   useEffect(() => { localStorage.setItem('detail-expenses', JSON.stringify(expenses)) }, [expenses])
   useEffect(() => { document.body.style.overflow = bookingOpen || adminOpen || accessOpen || adminLoginOpen ? 'hidden' : ''; return () => { document.body.style.overflow = '' } }, [bookingOpen, adminOpen, accessOpen, adminLoginOpen])
@@ -57,8 +54,10 @@ function App() {
       setSubmitted(true)
     } catch (error) { setBookingError(error.message) } finally { setBookingSaving(false) }
   }
-  const saveAccount = account => { setAccounts(list => [...list, account]); setCurrentAccount(account); setAccessOpen(false) }
-  const addCar = car => { const updated = {...currentAccount,cars:[...currentAccount.cars,car]}; setCurrentAccount(updated); setAccounts(list => list.map(a => a.id === updated.id ? updated : a)) }
+  useEffect(() => { fetch('/api/auth/me').then(async response => { if (response.ok) { const result = await response.json(); setCurrentAccount(result.account); setBookings(result.bookings || []) } }) }, [])
+  const authenticate = result => { setCurrentAccount(result.account); setBookings(result.bookings || []); setAccessOpen(false) }
+  const addCar = async car => { const response = await fetch('/api/vehicles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(car) }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'No pudimos guardar el vehículo.'); setCurrentAccount(account => ({ ...account, cars: [...(account.cars || []), result.vehicle] })) }
+  const logout = async () => { await fetch('/api/auth/logout', { method: 'POST' }); setCurrentAccount(null); setBookings([]); setAccessOpen(false) }
   const selectPaymentEvidence = file => {
     if (!file) return setForm(current => ({ ...current, paymentEvidenceName: '', paymentEvidenceData: '' }))
     if (file.size > 5 * 1024 * 1024) return setBookingError('El comprobante no puede superar 5 MB.')
@@ -67,13 +66,17 @@ function App() {
     reader.readAsDataURL(file)
   }
   const openAdmin = async () => {
-    const [bookingsResponse, statusResponse] = await Promise.all([fetch('/api/admin/bookings'), fetch('/api/admin/system-status')])
+    const [bookingsResponse, statusResponse, operationsResponse] = await Promise.all([fetch('/api/admin/bookings'), fetch('/api/admin/system-status'), fetch('/api/admin/operations')])
     const result = await bookingsResponse.json()
     setSystemStatus(await statusResponse.json())
+    if (operationsResponse.ok) { const operations = await operationsResponse.json(); setBlockedDates(operations.blockedDates || []); setExpenses(operations.expenses || []) }
     if (bookingsResponse.ok) setBookings(result.bookings || [])
     setAdminLoginOpen(false)
     setAdminOpen(true)
   }
+  const saveBlockedDate = async date => { const response = await fetch('/api/admin/blocked-dates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error); setBlockedDates(list => list.includes(date) ? list : [...list, date]) }
+  const removeBlockedDate = async date => { const response = await fetch(`/api/admin/blocked-dates/${date}`, { method: 'DELETE' }); if (!response.ok) throw new Error('No pudimos desbloquear la fecha.'); setBlockedDates(list => list.filter(item => item !== date)) }
+  const saveExpense = async expense => { const response = await fetch('/api/admin/expenses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(expense) }); const result = await response.json(); if (!response.ok) throw new Error(result.error); setExpenses(list => [result.expense, ...list]) }
 
   return <>
     <header className="header">
@@ -122,10 +125,11 @@ function App() {
 
     {bookingOpen && <div className="modal-backdrop" onMouseDown={() => setBookingOpen(false)}><section className="modal" onMouseDown={e => e.stopPropagation()} aria-modal="true" role="dialog"><button className="close" aria-label="Cerrar" onClick={() => setBookingOpen(false)}><X/></button>{submitted ? <div className="success"><span><Check/></span><span className="kicker">CITA REGISTRADA</span><h2>¡Gracias, {form.name.split(' ')[0]}!</h2><p>Tu cita para <strong>{form.service}</strong> fue agregada al calendario. Josue recibió los datos para confirmarla.</p>{notificationResults.some(n => n.status === 'sent') && <div className="notification-status">{notificationResults.filter(n => n.status === 'sent').map(n => <span key={n.channel}><Check size={14}/>{n.channel === 'email' ? 'Correo enviado' : 'WhatsApp enviado'}</span>)}</div>}<button className="btn" onClick={() => { setBookingOpen(false); setForm(emptyForm) }}>Listo</button></div> : <><span className="kicker">RESERVA TU EXPERIENCIA</span><h2>Agenda tu cita</h2><p className="modal-intro">No necesitas una cuenta para reservar. Elige el horario ideal y te contactaremos.</p><form onSubmit={submit}><label>Nombre completo<input required value={form.name} onChange={e => setForm({...form,name:e.target.value})} placeholder="Tu nombre"/></label><div className="form-row"><label>Teléfono<input required type="tel" value={form.phone} onChange={e => setForm({...form,phone:e.target.value})} placeholder="+506 8888-8888"/></label><label>Correo<input required type="email" value={form.email} onChange={e => setForm({...form,email:e.target.value})} placeholder="tu@correo.com"/></label></div><label>Vehículo{currentAccount?.cars?.length ? <select required value={form.vehicle} onChange={e => setForm({...form,vehicle:e.target.value})}><option value="">Selecciona un vehículo</option>{currentAccount.cars.map(c => <option key={c.id}>{c.make} {c.model} {c.year}</option>)}</select> : <input required value={form.vehicle} onChange={e => setForm({...form,vehicle:e.target.value})} placeholder="Marca, modelo y año"/>}</label><label>Servicio<select value={form.service} onChange={e => setForm({...form,service:e.target.value})}>{services.map(s => <option key={s.name} value={s.name}>{s.name} · {s.price}</option>)}</select></label><div className="form-row"><label>Fecha<input required type="date" min={minBookingDate} value={form.date} onChange={e => setForm({...form,date:e.target.value})}/>{blockedDates.includes(form.date) && <span className="field-error">Esta fecha no está disponible.</span>}</label><label>Hora<select required value={form.time} onChange={e => setForm({...form,time:e.target.value})}><option value="">Selecciona</option><option>09:00</option><option>11:00</option><option>14:00</option><option>16:00</option></select></label></div><fieldset className="payment-options"><legend>Método de pago</legend><label className={form.paymentMethod === 'sinpe' ? 'payment-option selected' : 'payment-option'}><input type="radio" name="paymentMethod" value="sinpe" checked={form.paymentMethod === 'sinpe'} onChange={e => setForm({...form,paymentMethod:e.target.value,paymentEvidenceName:'',paymentEvidenceData:''})}/><span><strong>SINPE Móvil</strong><small>Transferencia y comprobante</small></span></label><label className={form.paymentMethod === 'cash' ? 'payment-option selected' : 'payment-option'}><input type="radio" name="paymentMethod" value="cash" checked={form.paymentMethod === 'cash'} onChange={e => setForm({...form,paymentMethod:e.target.value,paymentEvidenceName:'',paymentEvidenceData:''})}/><span><strong>Efectivo</strong><small>Pago el día de la cita</small></span></label><label className="payment-option disabled"><input type="radio" name="paymentMethod" value="card" disabled/><span><strong>Tarjeta</strong><small>Próximamente</small></span></label></fieldset>{form.paymentMethod === 'sinpe' && <div className="sinpe-panel"><span>Envía el monto a</span><strong>{sinpePhone}</strong><label>Adjuntar comprobante<input aria-label="Comprobante SINPE" required type="file" accept="image/*,application/pdf" onChange={e => selectPaymentEvidence(e.target.files?.[0])}/></label>{form.paymentEvidenceName && <small>✓ {form.paymentEvidenceName}</small>}<p>La reserva permanecerá pendiente hasta que Josue revise el comprobante.</p></div>}{form.paymentMethod === 'cash' && <p className="cash-note">Pagarás el día de la cita. Josue marcará el pago como recibido antes de completar el servicio.</p>}<label>Notas (opcional)<textarea value={form.notes} onChange={e => setForm({...form,notes:e.target.value})} placeholder="Cuéntanos algo que debamos saber..."/></label><label className="consent-check"><input type="checkbox" checked={form.whatsappOptIn} onChange={e => setForm({...form,whatsappOptIn:e.target.checked})}/><span>Acepto recibir la confirmación y recordatorios de esta cita por WhatsApp.</span></label>{bookingError && <p className="form-error" role="alert">{bookingError}</p>}<button disabled={bookingSaving || blockedDates.includes(form.date)} className="btn full" type="submit">{bookingSaving ? 'Confirmando en Calendar…' : <>Solicitar reservación <ArrowRight size={18}/></>}</button><small className="privacy"><ShieldCheck size={14}/> La cita se registrará en el calendario del negocio.</small></form></>}</section></div>}
 
-    {accessOpen && !currentAccount && <AccessModal accounts={accounts} onClose={() => setAccessOpen(false)} onLogin={a => { setCurrentAccount(a); setAccessOpen(false) }} onRegister={saveAccount}/>}
-    {currentAccount && accessOpen && <CustomerPortal account={currentAccount} bookings={bookings} onAddCar={addCar} onLogout={() => { setCurrentAccount(null); setAccessOpen(false) }} onClose={() => setAccessOpen(false)}/>}
+    {accessOpen && !currentAccount && <AccessModal onClose={() => setAccessOpen(false)} onAuthenticated={authenticate}/>}
+    {currentAccount && accessOpen && <CustomerPortal account={currentAccount} bookings={bookings} onAddCar={addCar} onLogout={logout} onClose={() => setAccessOpen(false)}/>}
     {adminLoginOpen && <AdminLogin onClose={() => setAdminLoginOpen(false)} onSuccess={openAdmin}/>}
-    {adminOpen && <AdminPortal bookings={bookings} setBookings={setBookings} blockedDates={blockedDates} setBlockedDates={setBlockedDates} expenses={expenses} setExpenses={setExpenses} systemStatus={systemStatus} onClose={() => setAdminOpen(false)}/>}
+    {adminOpen && <AdminPortal bookings={bookings} setBookings={setBookings} blockedDates={blockedDates} onBlockDate={saveBlockedDate} onUnblockDate={removeBlockedDate} expenses={expenses} onAddExpense={saveExpense} systemStatus={systemStatus} onClose={() => setAdminOpen(false)}/>}
+
   </>
 }
 

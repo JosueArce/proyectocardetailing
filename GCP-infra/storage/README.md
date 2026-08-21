@@ -158,7 +158,6 @@ export REGION="us-west1"
 
 El script es idempotente, crea Firestore solo si no existe, crea un bucket privado, aplica ciclo de vida y asigna permisos a la cuenta de Cloud Run.
 
-
 Puedes ejecutarlo desde **Cloud Shell** o desde una Mac con `gcloud` autenticado. Cloud Build tampoco lo ejecuta en cada merge: `cloudbuild.yaml` solamente construye y despliega la aplicación, evitando que la cuenta del pipeline necesite permisos administrativos permanentes para crear bases de datos o modificar IAM.
 
 ## Desplegar índices y reglas
@@ -170,7 +169,24 @@ firebase use "$PROJECT_ID"
 firebase deploy --config GCP-infra/storage/firebase.json --only firestore:rules,firestore:indexes
 ```
 
-La reservación ya se guarda en la colección `bookings`, el panel administrativo obtiene esa colección y los comprobantes SINPE se cargan al bucket privado. En esta primera integración el archivo viaja al servidor codificado en base64 y tiene un límite de 5 MB. Antes de producción conviene sustituir este transporte por URLs firmadas, migrar cuentas/vehículos/gastos/bloqueos desde `localStorage` y agregar autenticación persistente para que el cliente consulte su historial desde cualquier dispositivo.
+Las reservaciones se guardan en `bookings`, perfiles en `users`, autos en `vehicles`, gastos en `expenses`, bloqueos en `blockedDates` y comprobantes SINPE en el bucket privado. Firebase Authentication administra contraseñas; la aplicación nunca las escribe en Firestore ni `localStorage`. Una cookie HttpOnly relaciona la sesión con el UID y el historial usa `customerId`, conservando compatibilidad con reservas antiguas por correo. La disponibilidad se valida nuevamente en el servidor contra citas y bloqueos. En esta primera integración el comprobante viaja codificado en base64 con límite de 5 MB; para archivos grandes conviene usar URLs firmadas.
+
+## Activar cuentas persistentes
+
+1. En Firebase Console abre **Authentication → Sign-in method** y habilita **Email/Password**.
+2. En **Project settings → General**, copia el **Web API Key**.
+3. Sustituye `_FIREBASE_WEB_API_KEY` en `GCP-infra/cloudbuild.yaml` o configura `FIREBASE_WEB_API_KEY` al desplegar Cloud Run.
+4. Despliega una revisión nueva y registra una cuenta de prueba.
+5. Comprueba `Authentication → Users`, `Firestore → users` y `Firestore → vehicles`.
+
+```bash
+gcloud run services update proyectocardetailing \
+  --region=us-west1 \
+  --project="$PROJECT_ID" \
+  --update-env-vars="FIREBASE_WEB_API_KEY=TU_WEB_API_KEY"
+```
+
+La cuenta puede volver a abrirse desde otro dispositivo. El servidor intercambia las credenciales con Firebase, crea una sesión segura y devuelve únicamente el perfil, autos y citas pertenecientes a ese UID.
 
 ## Verificar la integración desde el sitio
 
