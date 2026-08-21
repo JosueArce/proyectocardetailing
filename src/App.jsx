@@ -129,6 +129,7 @@ function App() {
     {currentAccount && accessOpen && <CustomerPortal account={currentAccount} bookings={bookings} onAddCar={addCar} onLogout={logout} onClose={() => setAccessOpen(false)}/>}
     {adminLoginOpen && <AdminLogin onClose={() => setAdminLoginOpen(false)} onSuccess={openAdmin}/>}
     {adminOpen && <AdminPortal bookings={bookings} setBookings={setBookings} blockedDates={blockedDates} onBlockDate={saveBlockedDate} onUnblockDate={removeBlockedDate} expenses={expenses} onAddExpense={saveExpense} systemStatus={systemStatus} onClose={() => setAdminOpen(false)}/>}
+
   </>
 }
 

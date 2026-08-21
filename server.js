@@ -13,7 +13,9 @@ const requiredFields = ['name', 'phone', 'email', 'vehicle', 'service', 'date', 
 const adminEmail = process.env.ADMIN_EMAIL || 'admin@estudioauto.com'
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
 const sessionSecret = process.env.SESSION_SECRET || 'development-only-change-me'
+
 const firebaseApiKey = process.env.FIREBASE_WEB_API_KEY || ''
+
 
 // googleapis es una dependencia grande. Se carga solo cuando una petición necesita
 // Calendar para que una instancia de Cloud Run con poca memoria pueda iniciar y
@@ -163,6 +165,7 @@ app.post('/api/admin/login', (request, response) => {
   return response.json({ ok: true })
 })
 
+
 app.post('/api/auth/register', async (request, response) => {
   const { name, email, phone, password } = request.body || {}
   if (!name || !email || !phone || !password || password.length < 6) return response.status(400).json({ error: 'Completa todos los datos y usa una contraseña de al menos 6 caracteres.' })
@@ -305,6 +308,7 @@ app.post('/api/bookings', async (request, response) => {
   if (!serviceCatalog[booking.service]) return response.status(400).json({ error: 'El servicio seleccionado no es válido.' })
   if (!['sinpe', 'cash'].includes(booking.paymentMethod)) return response.status(400).json({ error: 'El método de pago no es válido.' })
   if (booking.paymentMethod === 'sinpe' && (!booking.paymentEvidenceName || !booking.paymentEvidenceData)) return response.status(400).json({ error: 'Debes adjuntar el comprobante de SINPE Móvil.' })
+
 
   let stage = 'availability'
   let uploadedReceipt = ''

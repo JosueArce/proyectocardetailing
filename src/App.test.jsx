@@ -115,15 +115,19 @@ describe('sitio de detallado automotriz', () => {
     await user.type(within(access).getByLabelText(/correo/i), 'ana@example.com')
     await user.type(within(access).getByLabelText(/contraseña/i), 'secreto1')
     await user.click(within(access).getByRole('button', { name: 'Crear cuenta' }))
+
     expect(fetch).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({ method: 'POST' }))
     expect(localStorage.getItem('detail-accounts')).toBeNull()
     await user.click(await screen.findByRole('button', { name: 'Hola, Ana' }))
+
     const portal = screen.getByRole('dialog')
     await user.type(within(portal).getByLabelText('Marca'), 'Toyota')
     await user.type(within(portal).getByLabelText('Modelo'), 'RAV4')
     await user.type(within(portal).getByLabelText('Año'), '2023')
     await user.click(within(portal).getByRole('button', { name: /agregar vehículo/i }))
+
     expect(fetch).toHaveBeenCalledWith('/api/vehicles', expect.objectContaining({ method: 'POST' }))
+
     expect(within(portal).getByText('Toyota RAV4')).toBeInTheDocument()
   })
 
@@ -152,6 +156,7 @@ describe('sitio de detallado automotriz', () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(await screen.findByRole('button', { name: 'Hola, Ana' }))
+
     const portal = screen.getByRole('dialog')
     await user.click(within(portal).getByRole('button', { name: /abrir detalle de signature/i }))
     expect(screen.getByText('Descontaminación y cera premium.')).toBeInTheDocument()

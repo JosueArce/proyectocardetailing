@@ -145,6 +145,7 @@ tmp/{uploadId}/...
 
 ## Crear recursos
 
+
 Estos recursos **no se crean al desplegar una revisión de Cloud Run**. La aplicación no debe crear infraestructura durante su arranque. Se preparan una sola vez ejecutando `setup.sh`; después, las revisiones nuevas reutilizan la misma base de datos y el mismo bucket. El script es idempotente, por lo que se puede volver a ejecutar sin duplicarlos.
 
 Desde la raíz:
