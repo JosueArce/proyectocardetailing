@@ -31,7 +31,9 @@ describe('sitio de detallado automotriz', () => {
   })
 
   it('presenta errores de comprobante en lenguaje útil para el cliente', async () => {
+
     fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Sin sesión' }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ projects: [] }) }).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.' }) })
+
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
@@ -40,7 +42,9 @@ describe('sitio de detallado automotriz', () => {
     await user.type(within(dialog).getByLabelText(/teléfono/i), '88881234')
     await user.type(within(dialog).getByLabelText(/correo/i), 'sofia@example.com')
     await user.type(within(dialog).getByLabelText(/vehículo/i), 'Nissan Navara')
+
     await user.click(within(dialog).getByRole('checkbox', { name: /detallado interior/i }))
+
     await user.type(within(dialog).getByLabelText(/fecha/i), '2030-08-22')
     await user.selectOptions(within(dialog).getByLabelText(/hora/i), '14:00')
     await user.click(within(dialog).getByRole('radio', { name: /efectivo/i }))
@@ -59,7 +63,9 @@ describe('sitio de detallado automotriz', () => {
     await user.type(within(dialog).getByLabelText(/teléfono/i), '88881234')
     await user.type(within(dialog).getByLabelText(/correo/i), 'sofia@example.com')
     await user.type(within(dialog).getByLabelText(/vehículo/i), 'Mazda 3 2024')
+
     await user.click(within(dialog).getByRole('checkbox', { name: /detallado interior/i }))
+
     await user.type(within(dialog).getByLabelText(/fecha/i), '2030-05-20')
     await user.selectOptions(within(dialog).getByLabelText(/hora/i), '11:00')
     await user.click(within(dialog).getByRole('radio', { name: /efectivo/i }))
@@ -97,6 +103,7 @@ describe('sitio de detallado automotriz', () => {
     await user.click(within(detail).getByRole('button', { name: 'Cerrar' }))
     expect(within(admin).getByText('Confirmada')).toBeInTheDocument()
   })
+
 
   it('combina servicios desde el carrito y los conserva al reservar', async () => {
     const user = userEvent.setup()
@@ -138,6 +145,7 @@ describe('sitio de detallado automotriz', () => {
     expect(screen.getByText('Lavado técnico, pulido y protección de carrocería.')).toBeInTheDocument()
   })
 
+
   it('muestra el estado vacío del panel cuando no hay citas', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -161,9 +169,11 @@ describe('sitio de detallado automotriz', () => {
     await user.type(within(access).getByLabelText(/correo/i), 'ana@example.com')
     await user.type(within(access).getByLabelText(/contraseña/i), 'secreto1')
     await user.click(within(access).getByRole('button', { name: 'Crear cuenta' }))
+
     expect(fetch).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({ method: 'POST' }))
     expect(localStorage.getItem('detail-accounts')).toBeNull()
     await user.click(await screen.findByRole('button', { name: 'Hola, Ana' }))
+
     const portal = screen.getByRole('dialog')
     await user.type(within(portal).getByLabelText('Marca'), 'Toyota')
     await user.type(within(portal).getByLabelText('Modelo'), 'RAV4')

@@ -19,6 +19,7 @@ gcloud storage buckets update "gs://$BUCKET" --lifecycle-file=GCP-infra/storage/
 gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:$RUNTIME_SA" --role=roles/datastore.user --condition=None >/dev/null
 gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" --member="serviceAccount:$RUNTIME_SA" --role=roles/storage.objectAdmin >/dev/null
 
+
 # Cloud Storage representa las carpetas como prefijos. Estos marcadores hacen
 # visible la estructura inicial; cada publicación crea su propio projectId.
 MARKER_DIR="$(mktemp -d)"
@@ -28,5 +29,6 @@ printf 'Archivos de proyectos publicados desde AutoEstudioCR.\n' > "$MARKER_DIR/
 gcloud storage cp "$MARKER_DIR/README.txt" "gs://$BUCKET/projects/README.txt" >/dev/null
 gcloud storage cp "$MARKER_DIR/.keep" "gs://$BUCKET/projects/_estructura/photos/.keep" >/dev/null
 gcloud storage cp "$MARKER_DIR/.keep" "gs://$BUCKET/projects/_estructura/videos/.keep" >/dev/null
+
 
 printf 'Firestore y gs://%s están preparados en %s.\n' "$BUCKET" "$REGION"

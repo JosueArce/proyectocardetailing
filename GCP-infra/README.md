@@ -104,7 +104,9 @@ Cloud Run conserva revisiones anteriores. Para regresar todo el tráfico a una r
 
 ```bash
 gcloud run revisions list --service proyectocardetailing --region us-west1
+
 gcloud run services update-traffic proyectocardetailing \
+
   --region us-west1 \
   --to-revisions REVISION_ESTABLE=100
 ```
@@ -174,6 +176,7 @@ Finalmente, comparte el calendario con exactamente la cuenta que muestra `servic
 
 ### La revisión no escucha en `PORT=8080`
 
+
 Este mensaje corresponde al arranque del contenedor, no a Firestore ni a Cloud Storage. La imagen escucha automáticamente la variable reservada `PORT`; Calendar se carga bajo demanda para reducir el consumo durante el inicio. El pipeline ahora reserva **512 MiB**, un CPU y 300 segundos por solicitud. También inicia el servidor y consulta `/health` durante `docker build`, por lo que una imagen incapaz de escuchar no se publica.
 
 No agregues ni modifiques manualmente `PORT` en las variables de entorno. Confirma el error real de la revisión con:
@@ -186,6 +189,7 @@ gcloud run services logs read proyectocardetailing \
 ```
 
 Para aplicar inmediatamente los recursos y el puerto correctos:
+
 
 ```bash
 gcloud run services update proyectocardetailing \
@@ -205,6 +209,7 @@ gcloud run services describe proyectocardetailing \
   --project="$PROJECT_ID" \
   --format='yaml(status.latestCreatedRevisionName,status.latestReadyRevisionName,spec.template.spec.containers[0].ports,spec.template.spec.containers[0].resources)'
 ```
+
 
 ## Correo y WhatsApp de confirmación
 
