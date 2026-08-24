@@ -18,18 +18,16 @@ const services = [
 
 const serviceCategories = ['Servicios oficiales', 'Tratamientos', 'Servicios adicionales']
 
-
 const sampleProjects = [
   { id: 'demo-exterior', title: 'Renovación exterior', description: 'Lavado técnico, descontaminación y acabado brillante de la carrocería.', media: [{ type: 'image', url: 'https://images.unsplash.com/photo-1507136566006-cfc505b114fc?auto=format&fit=crop&w=1200&q=85' }] },
   { id: 'demo-pintura', title: 'Detalle de pintura', description: 'Pulido de carrocería para recuperar profundidad, reflejo y presencia.', media: [{ type: 'image', url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=900&q=85' }] },
   { id: 'demo-acabado', title: 'Acabado profesional', description: 'Protección final y revisión minuciosa antes de entregar el vehículo.', media: [{ type: 'image', url: 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?auto=format&fit=crop&w=900&q=85' }] },
 ]
 
-const sinpePhone = import.meta.env.VITE_SINPE_PHONE || '+506 0000-0000'
+const sinpePhone = import.meta.env.VITE_SINPE_PHONE || '+506 8362-9162'
 const emptyForm = { name: '', phone: '', email: '', vehicle: '', services: [], date: '', time: '', notes: '', whatsappOptIn: false, paymentMethod: 'sinpe', paymentStatus: 'Pendiente', paymentEvidenceName: '', paymentEvidenceData: '' }
 const minBookingDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
 const crc = value => `₡${Math.round(Number(value)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`
-
 
 function App() {
   const [menu, setMenu] = useState(false)
@@ -37,9 +35,7 @@ function App() {
   const [adminOpen, setAdminOpen] = useState(false)
   const [adminLoginOpen, setAdminLoginOpen] = useState(false)
   const [accessOpen, setAccessOpen] = useState(false)
-
   const [cartOpen, setCartOpen] = useState(false)
-
   const [submitted, setSubmitted] = useState(false)
   const [bookingError, setBookingError] = useState('')
   const [bookingSaving, setBookingSaving] = useState(false)
@@ -50,14 +46,12 @@ function App() {
   const [currentAccount, setCurrentAccount] = useState(null)
   const [blockedDates, setBlockedDates] = useState(() => JSON.parse(localStorage.getItem('detail-blocked-dates') || '[]'))
   const [expenses, setExpenses] = useState(() => JSON.parse(localStorage.getItem('detail-expenses') || '[]'))
-
   const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem('detail-service-cart') || '[]').filter(name => services.some(service => service.name === name)))
   const [projects, setProjects] = useState(sampleProjects)
 
   useEffect(() => { localStorage.setItem('detail-bookings', JSON.stringify(bookings)) }, [bookings])
   useEffect(() => { localStorage.setItem('detail-blocked-dates', JSON.stringify(blockedDates)) }, [blockedDates])
   useEffect(() => { localStorage.setItem('detail-expenses', JSON.stringify(expenses)) }, [expenses])
-
   useEffect(() => { localStorage.setItem('detail-service-cart', JSON.stringify(cart)) }, [cart])
   useEffect(() => { document.body.style.overflow = bookingOpen || adminOpen || accessOpen || adminLoginOpen || cartOpen ? 'hidden' : ''; return () => { document.body.style.overflow = '' } }, [bookingOpen, adminOpen, accessOpen, adminLoginOpen, cartOpen])
 
@@ -81,14 +75,11 @@ function App() {
       setBookings(prev => [result.booking || { ...form, service, cost, paymentStatus: result.paymentStatus || 'Pendiente', calendarEventId: result.eventId, id: Date.now(), status: 'Pendiente', createdAt: new Date().toISOString() }, ...prev])
       setNotificationResults(result.notifications || [])
       setCart([])
-
       setSubmitted(true)
     } catch (error) { setBookingError(error.message) } finally { setBookingSaving(false) }
   }
   useEffect(() => { fetch('/api/auth/me').then(async response => { if (response.ok) { const result = await response.json(); setCurrentAccount(result.account); setBookings(result.bookings || []) } }) }, [])
-
   useEffect(() => { fetch('/api/projects').then(response => response.ok ? response.json() : null).then(result => { if (result?.projects?.length) setProjects(result.projects) }).catch(() => {}) }, [])
-
   const authenticate = result => { setCurrentAccount(result.account); setBookings(result.bookings || []); setAccessOpen(false) }
   const addCar = async car => { const response = await fetch('/api/vehicles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(car) }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'No pudimos guardar el vehículo.'); setCurrentAccount(account => ({ ...account, cars: [...(account.cars || []), result.vehicle] })) }
   const logout = async () => { await fetch('/api/auth/logout', { method: 'POST' }); setCurrentAccount(null); setBookings([]); setAccessOpen(false) }
@@ -114,17 +105,13 @@ function App() {
 
   return <>
     <header className="header">
-
       <a className="brand brand-logo" href="#inicio" aria-label="AutoEstudioCR Detailing, inicio"><img src="/autoestudiocr-logo.svg" alt="AutoEstudioCR Detailing"/><span className="brand-wordmark"><span>AutoEstudio<strong>CR</strong></span><small>DETAILING</small></span></a>
-
       <nav className={menu ? 'nav open' : 'nav'} aria-label="Navegación principal">
         <a href="#servicios" onClick={() => setMenu(false)}>Servicios</a><a href="#galeria" onClick={() => setMenu(false)}>Resultados</a><a href="#proceso" onClick={() => setMenu(false)}>Proceso</a><a href="#opiniones" onClick={() => setMenu(false)}>Opiniones</a>
         <button className="admin-link" onClick={() => { setAdminLoginOpen(true); setMenu(false) }}>Administrar</button>
         <button className="admin-link account-link" onClick={() => { setAccessOpen(true); setMenu(false) }}>{currentAccount ? `Hola, ${currentAccount.name.split(' ')[0]}` : 'Mi cuenta'}</button>
       </nav>
-
       <button className="cart-trigger" onClick={() => setCartOpen(true)} aria-label={`Carrito de servicios, ${cart.length} seleccionados`}><ShoppingCart/><span>{cart.length}</span></button>
-
       <button className="btn btn-small desktop-cta" onClick={() => openBooking()}>Reservar cita <ArrowRight size={16}/></button>
       <button className="menu-btn" onClick={() => setMenu(!menu)} aria-label="Abrir menú">{menu ? <X/> : <Menu/>}</button>
     </header>
@@ -144,16 +131,12 @@ function App() {
 
       <section className="section intro" id="servicios">
         <div className="section-head"><div><span className="kicker">SERVICIOS OFICIALES</span><h2>Cuidado profesional<br/><em>para cada necesidad.</em></h2></div><div className="services-intro"><p>Selecciona un servicio individual. Próximamente podrás ahorrar con paquetes y combos personalizados.</p><small>* Los precios están sujetos a cambios según la condición y características del vehículo.</small></div></div>
-
         {serviceCategories.map(category => <div className="service-category" key={category}><div className="category-heading"><span>{category}</span><i/></div><div className="service-grid">{services.filter(service => service.category === category).map(({ icon: Icon, ...s }) => <article className={`service-card ${cart.includes(s.name) ? 'in-cart' : ''}`} key={s.name}><div className="service-icon"><Icon/></div><div className="service-title"><div><h3>{s.name}</h3><span>{s.category}</span></div><strong><small>valor</small>{s.price}</strong></div><p>{s.desc}</p><ul>{s.features.map(f => <li key={f}><Check size={15}/>{f}</li>)}</ul><button className="add-service" onClick={() => toggleCart(s.name)}>{cart.includes(s.name) ? <><Check size={17}/> Agregado al carrito</> : <><ShoppingCart size={17}/> Agregar servicio</>}</button></article>)}</div></div>)}
-
       </section>
 
       <section className="section products" id="productos"><div className="section-head"><div><span className="kicker">PRODUCTOS PROFESIONALES</span><h2>Resultados respaldados por<br/><em>marcas líderes.</em></h2></div><p>Seleccionamos químicos, pulimentos y protecciones profesionales según la superficie y condición de cada vehículo.</p></div><div className="product-grid">{[['CARPRO','Cerámicos y descontaminación'],["MEGUIAR'S",'Pulimentos y acabado'],['KOCH-CHEMIE','Limpieza especializada'],['VONIXX','Protección y brillo']].map(([brand,desc]) => <article key={brand}><span>PRO SERIES</span><h3>{brand}</h3><p>{desc}</p><ShieldCheck/></article>)}</div></section>
 
-
       <section className="gallery-section" id="galeria"><div className="gallery-copy"><span className="kicker">RESULTADOS QUE HABLAN</span><h2>Trabajo real.<br/><em>Resultados reales.</em></h2><p>Explora fotografías y videos de proyectos realizados por AutoEstudioCR.</p></div><div className="gallery-grid">{projects.map(project => <article className="project-card" key={project.id}><div className="project-media">{project.media?.map((item, index) => item.type === 'video' ? <video aria-label={`${project.title}, video ${index + 1}`} controls preload="metadata" src={item.url} key={item.url}/> : <img src={item.url} alt={`${project.title}, fotografía ${index + 1}`} key={item.url}/>)}</div><div className="project-info"><span className="project-type">PROYECTO · {project.media?.length || 0} ARCHIVOS</span><h3>{project.title}</h3><p>{project.description}</p></div></article>)}</div></section>
-
 
       <section className="section process" id="proceso"><div className="section-head"><div><span className="kicker">SIMPLE. TRANSPARENTE. EXCEPCIONAL.</span><h2>Tu auto en buenas manos,<br/><em>desde el primer clic.</em></h2></div></div><div className="steps">{[['01','Reserva en línea','Elige el servicio, día y hora que mejor te funcionen.'],['02','Evaluamos tu auto','Revisamos cada detalle y confirmamos el tratamiento ideal.'],['03','Creamos la magia','Nuestros especialistas trabajan con precisión y productos premium.'],['04','Vuelve a estrenar','Recibe tu vehículo impecable y disfruta el resultado.']].map(([n,t,d]) => <div className="step" key={n}><span>{n}</span><div className="step-icon">{n === '01' ? <CalendarDays/> : n === '04' ? <Car/> : <Sparkles/>}</div><h3>{t}</h3><p>{d}</p></div>)}</div></section>
 

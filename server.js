@@ -8,7 +8,6 @@ const app = express()
 const port = Number(process.env.PORT || 8080)
 const calendarId = process.env.GOOGLE_CALENDAR_ID || 'josue.arce.gonzalez@gmail.com'
 const timeZone = 'America/Costa_Rica'
-
 const serviceCatalog = {
   'Detallado interior': { duration: 120, cost: 5000 },
   'Detallado exterior': { duration: 120, cost: 6000 },
@@ -22,7 +21,6 @@ const serviceCatalog = {
   'Descontaminación exterior': { duration: 180, cost: 15000 },
   'Abrillantado de carrocería': { duration: 180, cost: 20000 },
 }
-
 const requiredFields = ['name', 'phone', 'email', 'vehicle', 'date', 'time']
 const resolveServices = booking => {
   const requested = Array.isArray(booking.services) ? booking.services : [booking.service]
@@ -35,11 +33,11 @@ const resolveServices = booking => {
     duration: names.reduce((total, name) => total + serviceCatalog[name].duration, 0),
   }
 }
-const adminEmail = process.env.ADMIN_EMAIL || 'admin@estudioauto.com'
-const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
+const adminEmail = process.env.ADMIN_EMAIL || 'josue.arce.gonzalez@gmail.com'
+const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!'
+const adminPhone = process.env.ADMIN_PHONE || '83629162'
 const sessionSecret = process.env.SESSION_SECRET || 'development-only-change-me'
 const firebaseApiKey = process.env.FIREBASE_WEB_API_KEY || ''
-
 
 // googleapis es una dependencia grande. Se carga solo cuando una petición necesita
 // Calendar para que una instancia de Cloud Run con poca memoria pueda iniciar y
@@ -147,10 +145,9 @@ const deleteReceipt = async objectName => {
   }
 }
 
-
 const uploadProjectMedia = async (item, projectId, index) => {
-  const match = /^data:(image\/(?:jpeg|png|webp)|video\/(?:mp4|webm));base64,([A-Za-z0-9+/=]+)$/.exec(item.data || '')
-  if (!match) throw new Error('Los proyectos aceptan JPG, PNG, WEBP, MP4 o WEBM.')
+  const match = /^data:(image\/(?:jpeg|png|webp)|video\/(?:mp4|webm|quicktime));base64,([A-Za-z0-9+/=]+)$/.exec(item.data || '')
+  if (!match) throw new Error('Los proyectos aceptan JPG, PNG, WEBP, MP4, WEBM o MOV.')
   const body = Buffer.from(match[2], 'base64')
   if (body.length > 15 * 1024 * 1024) throw new Error('Cada archivo debe pesar menos de 15 MB.')
   const bucket = process.env.STORAGE_BUCKET
@@ -166,7 +163,6 @@ const uploadProjectMedia = async (item, projectId, index) => {
 
 app.disable('x-powered-by')
 app.use(express.json({ limit: '30mb' }))
-
 
 app.get('/health', (_request, response) => response.type('text').send('ok'))
 
@@ -204,9 +200,8 @@ app.post('/api/admin/login', (request, response) => {
   const expires = String(Date.now() + 8 * 60 * 60 * 1000)
   const token = encodeURIComponent(`${expires}.${signSession(expires)}`)
   response.setHeader('Set-Cookie', `admin_session=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=28800`)
-  return response.json({ ok: true })
+  return response.json({ ok: true, admin: { name: 'Josue Arce', email: adminEmail, phone: adminPhone } })
 })
-
 
 app.post('/api/auth/register', async (request, response) => {
   const { name, email, phone, password } = request.body || {}
@@ -263,7 +258,6 @@ app.post('/api/vehicles', requireCustomer, async (request, response) => {
   }
 })
 
-
 app.get('/api/projects', async (_request, response) => {
   try {
     const projects = (await listCollection('projects')).filter(project => project.published !== false).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
@@ -308,7 +302,6 @@ app.post('/api/admin/projects', requireAdmin, async (request, response) => {
   }
 })
 
-
 app.get('/api/admin/bookings', requireAdmin, async (_request, response) => {
   try {
     const { projectId, firestore } = await getGoogleServices()
@@ -341,7 +334,6 @@ app.get('/api/admin/system-status', requireAdmin, async (_request, response) => 
   }
   const ok = checks.firestore.ok && checks.storage.ok
   return response.status(ok ? 200 : 503).json({ ok })
-
 })
 
 app.get('/api/admin/operations', requireAdmin, async (_request, response) => {
@@ -395,17 +387,14 @@ app.post('/api/bookings', async (request, response) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(booking.date) || !/^\d{2}:\d{2}$/.test(booking.time)) {
     return response.status(400).json({ error: 'La fecha o la hora no tienen un formato válido.' })
   }
-
   const selection = resolveServices(booking)
   if (!selection) return response.status(400).json({ error: 'Selecciona al menos un servicio válido.' })
-
   if (!['sinpe', 'cash'].includes(booking.paymentMethod)) return response.status(400).json({ error: 'El método de pago no es válido.' })
   if (booking.paymentMethod === 'sinpe' && (!booking.paymentEvidenceName || !booking.paymentEvidenceData)) return response.status(400).json({ error: 'Debes adjuntar el comprobante de SINPE Móvil.' })
 
   let stage = 'availability'
   let uploadedReceipt = ''
   try {
-
     const { names, label, duration, cost } = selection
     const [existingBookings, blockedDates] = await Promise.all([listCollection('bookings'), listCollection('blockedDates')])
     if (blockedDates.some(item => item.date === booking.date)) return response.status(409).json({ error: 'Esa fecha no está disponible. Elige otro día.' })
@@ -421,7 +410,6 @@ app.post('/api/bookings', async (request, response) => {
     if (overlaps) return response.status(409).json({ error: 'Ese horario no tiene tiempo suficiente para todos los servicios seleccionados. Elige otra hora disponible.' })
     const customerId = readCustomerSession(request)
     const confirmedBooking = { ...booking, services: names, service: label, id: crypto.randomUUID(), customerId, cost, status: 'Pendiente', paymentStatus: 'Pendiente', createdAt: new Date().toISOString() }
-
     if (booking.paymentMethod === 'sinpe') {
       stage = 'storage'
       uploadedReceipt = await uploadReceipt(booking.paymentEvidenceData, booking.paymentEvidenceName, confirmedBooking.id)
@@ -430,7 +418,6 @@ app.post('/api/bookings', async (request, response) => {
     delete confirmedBooking.paymentEvidenceData
     stage = 'calendar'
     const calendar = await getCalendar()
-
     const start = requestedStart
     const end = requestedEnd
     const event = await calendar.events.insert({
@@ -438,7 +425,6 @@ app.post('/api/bookings', async (request, response) => {
       requestBody: {
         summary: `${label} · ${booking.vehicle}`,
         description: [`Cliente: ${booking.name}`, `Teléfono: ${booking.phone}`, `Vehículo: ${booking.vehicle}`, `Servicios: ${names.join(', ')}`, `Costo total: ₡${cost.toLocaleString('es-CR')}`, `Pago: ${booking.paymentMethod === 'sinpe' ? 'SINPE Móvil' : 'Efectivo'} · Pendiente`, booking.notes ? `Notas: ${booking.notes}` : ''].filter(Boolean).join('\n'),
-
         start: { dateTime: start.toISOString(), timeZone },
         end: { dateTime: end.toISOString(), timeZone },
       },
@@ -475,12 +461,10 @@ app.post('/api/booking-updates', requireAdmin, async (request, response) => {
       const calendar = await getCalendar()
       if (changes.status === 'Cancelada') await calendar.events.delete({ calendarId, eventId: booking.calendarEventId })
       else {
-
         const start = new Date(`${updatedBooking.date}T${updatedBooking.time}:00-06:00`)
         const duration = resolveServices(updatedBooking)?.duration || 120
         const end = new Date(start.getTime() + duration * 60_000)
         await calendar.events.patch({ calendarId, eventId: booking.calendarEventId, requestBody: { description: [`Estado: ${updatedBooking.status}`, `Cliente: ${updatedBooking.name}`, `Teléfono: ${updatedBooking.phone}`, `Vehículo: ${updatedBooking.vehicle}`, `Servicios: ${(updatedBooking.services || [updatedBooking.service]).join(', ')}`, updatedBooking.workDone ? `Trabajo realizado: ${updatedBooking.workDone}` : ''].filter(Boolean).join('\n'), start: { dateTime: start.toISOString(), timeZone }, end: { dateTime: end.toISOString(), timeZone } } })
-
       }
     }
     const storedBooking = await saveBooking(updatedBooking)
@@ -497,10 +481,8 @@ const root = path.dirname(fileURLToPath(import.meta.url))
 app.use('/assets', express.static(path.join(root, 'dist', 'assets'), { maxAge: '7d', immutable: true }))
 app.get(/.*/, (_request, response) => response.sendFile(path.join(root, 'dist', 'index.html')))
 
-
 const server = app.listen(port, '0.0.0.0', () => console.log(JSON.stringify({ severity: 'INFO', message: `AutoEstudioCR escuchando en el puerto ${port}`, port, nodeEnv: process.env.NODE_ENV || 'development', calendarId, timeZone })))
 server.on('error', error => {
   console.error(JSON.stringify({ severity: 'CRITICAL', message: 'El servidor no pudo iniciar', port, code: error.code, detail: error.message }))
   process.exit(1)
 })
-

@@ -39,3 +39,18 @@
 
 .project-card>.project-media{display:grid;grid-auto-flow:column;grid-auto-columns:100%;overflow-x:auto;scroll-snap-type:x mandatory;padding:0;color:#fff}.project-media img,.project-media video{width:100%;height:310px;object-fit:cover;filter:grayscale(.72) contrast(1.08);scroll-snap-align:start}.project-card>.project-info{padding:25px;color:#fff}.success>span:first-child,.notification-status span,.status.confirmada,.status.completada,.blocked-list span{background:#e30613;color:#fff}.detail-actions .approve,.detail-actions .complete{background:#050505}.detail-actions .cancel{background:#e30613}.payment-detail strong.paid,.payment-detail strong.unpaid,.car-item svg,.booking-meta svg,.step-icon{color:#e30613}
 @media(max-width:700px){.project-media img,.project-media video{height:270px}}
+
+/* Selector editorial para proyectos: oculta el control nativo en inglés y mantiene una lista clara. */
+.project-manager .project-file{position:relative;display:grid;place-items:center;min-height:112px;text-align:center;border:1px dashed #ffffff80!important;background:#ffffff08;transition:.2s}
+.project-manager .project-file:hover{border-color:#e30613!important;background:#e3061312}
+.project-file>span{display:inline-flex!important;align-items:center;justify-content:center;width:max-content;padding:12px 18px;background:#e30613;color:#fff!important;font-size:11px!important;font-weight:800;letter-spacing:.04em}
+.project-file>small{display:block;margin-top:10px;color:#ffffffb3;font-size:10px;line-height:1.5}
+.project-file input{position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
+.project-file-list{grid-column:1/-1;display:grid;gap:8px;padding:12px;border:1px solid #ffffff30;background:#ffffff08}
+.project-file-list>strong{color:#fff;font-size:11px}
+.project-file-list>span{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 10px;background:#fff;color:#050505;font-size:10px;font-weight:700}
+.project-file-list>span>span{min-width:0;overflow-wrap:anywhere}
+.project-file-list small{display:block;margin-top:3px;color:#05050599;font-weight:600}
+.project-file-list button{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border:0;background:#050505;color:#fff;cursor:pointer}
+.project-file-list button:hover{background:#e30613}
+.project-file-list svg{width:15px;height:15px}

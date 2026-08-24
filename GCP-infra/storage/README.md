@@ -131,7 +131,6 @@ bookings/{bookingId}/
 tmp/{uploadId}/...
 ```
 
-
 Los proyectos públicos se organizan automáticamente así:
 
 ```text
@@ -143,8 +142,7 @@ projects/{projectId}/
     └── 03-recorrido.mp4
 ```
 
-La colección Firestore `projects/{projectId}` conserva el título, descripción, estado de publicación y la metadata de cada archivo. El bucket permanece privado: la página obtiene el contenido mediante `/api/projects/{projectId}/media/{mediaIndex}` sin exponer credenciales ni hacer públicos los comprobantes. El panel administrativo admite entre uno y seis archivos JPG, PNG, WEBP, MP4 o WEBM por publicación, con un máximo de 15 MB por archivo y 20 MB por publicación. Estos límites mantienen la solicitud dentro del máximo de Cloud Run; para videos extensos se recomienda comprimirlos antes de subirlos. Cloud Storage usa prefijos en lugar de carpetas físicas; `setup.sh` crea marcadores iniciales para que `projects/`, `photos/` y `videos/` sean visibles en la consola.
-
+La colección Firestore `projects/{projectId}` conserva el título, descripción, estado de publicación y la metadata de cada archivo. El bucket permanece privado: la página obtiene el contenido mediante `/api/projects/{projectId}/media/{mediaIndex}` sin exponer credenciales ni hacer públicos los comprobantes. El panel administrativo permite seleccionar simultáneamente entre uno y seis archivos JPG, PNG, WEBP, MP4, WEBM o MOV por publicación, con un máximo de 15 MB por archivo y 20 MB por publicación. También permite agregar archivos en varias selecciones y quitarlos antes de publicar. Estos límites mantienen la solicitud dentro del máximo de Cloud Run; para videos extensos se recomienda comprimirlos antes de subirlos. Cloud Storage usa prefijos en lugar de carpetas físicas; `setup.sh` crea marcadores iniciales para que `projects/`, `photos/` y `videos/` sean visibles en la consola.
 
 `tmp/` se elimina automáticamente después de siete días y las cargas multipart incompletas después de un día mediante `lifecycle.json`.
 
@@ -212,7 +210,6 @@ La cuenta puede volver a abrirse desde otro dispositivo. El servidor intercambia
 6. El escudo pequeño del panel aparece verde cuando los servicios internos están disponibles y rojo cuando requieren revisión. Los nombres técnicos y detalles quedan únicamente en Cloud Logging.
 
 Los detalles técnicos se consultan únicamente en Cloud Logging. La interfaz muestra acciones concretas —revisar formato/tamaño, volver a intentar o elegir efectivo— sin mencionar proveedores internos.
-
 
 También puedes comprobarlo desde Cloud Shell:
 

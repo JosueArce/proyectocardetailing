@@ -65,6 +65,18 @@ const readProjectFile = file => new Promise((resolve, reject) => {
 function ProjectManager({ projects = [], setProjects }) {
   const [form, setForm] = useState({ title: '', description: '', files: [] })
   const [saving, setSaving] = useState(false); const [error, setError] = useState('')
+  const addFiles = fileList => {
+    const incoming = [...fileList]
+    setForm(current => {
+      const files = [...current.files]
+      for (const file of incoming) {
+        const duplicate = files.some(saved => saved.name === file.name && saved.size === file.size && saved.lastModified === file.lastModified)
+        if (!duplicate && files.length < 6) files.push(file)
+      }
+      return { ...current, files }
+    })
+  }
+  const removeFile = index => setForm(current => ({ ...current, files: current.files.filter((_, fileIndex) => fileIndex !== index) }))
   const submit = async event => {
     event.preventDefault(); const formElement = event.currentTarget; setSaving(true); setError('')
     try {
@@ -80,7 +92,7 @@ function ProjectManager({ projects = [], setProjects }) {
       setForm({ title: '', description: '', files: [] }); formElement.reset()
     } catch (projectError) { setError(projectError.message) } finally { setSaving(false) }
   }
-  return <div className="admin-box project-manager"><div className="project-manager-heading"><div><span className="kicker">PORTAFOLIO</span><h3>Publicar proyecto</h3></div><span>{projects.filter(project => !String(project.id).startsWith('demo-')).length} publicados</span></div><p>Las fotos y videos se guardan en la carpeta privada del proyecto y aparecerán en “Resultados que hablan”.</p><form onSubmit={submit}><label>Nombre del proyecto<input required value={form.title} onChange={event => setForm({...form,title:event.target.value})} placeholder="Ej. Renovación Toyota Hilux"/></label><label>Descripción del trabajo<textarea required value={form.description} onChange={event => setForm({...form,description:event.target.value})} placeholder="Detalla los servicios, productos y resultado obtenido..."/></label><label className="project-file"><span>Seleccionar fotos o videos</span><input aria-label="Fotos y videos del proyecto" multiple type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" onChange={event => setForm({...form,files:[...event.target.files]})}/></label>{form.files.length > 0 && <small>{form.files.length} {form.files.length === 1 ? 'archivo seleccionado' : 'archivos seleccionados'}</small>}{error && <p className="form-error" role="alert">{error}</p>}<button disabled={saving} className="btn full">{saving ? 'Publicando…' : 'Publicar en resultados'}</button></form></div>
+  return <div className="admin-box project-manager"><div className="project-manager-heading"><div><span className="kicker">PORTAFOLIO</span><h3>Publicar proyecto</h3></div><span>{projects.filter(project => !String(project.id).startsWith('demo-')).length} publicados</span></div><p>Las fotos y videos se guardan en la carpeta privada del proyecto y aparecerán en “Resultados que hablan”.</p><form onSubmit={submit}><label>Nombre del proyecto<input required value={form.title} onChange={event => setForm({...form,title:event.target.value})} placeholder="Ej. Renovación Toyota Hilux"/></label><label>Descripción del trabajo<textarea required value={form.description} onChange={event => setForm({...form,description:event.target.value})} placeholder="Detalla los servicios, productos y resultado obtenido..."/></label><label className="project-file"><span>Seleccionar fotos y videos</span><small>Selecciona hasta 6 archivos a la vez. También puedes volver a abrir el selector para agregar más.</small><input aria-label="Fotos y videos del proyecto" multiple type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,.mov" onChange={event => { addFiles(event.target.files); event.target.value = '' }}/></label>{form.files.length > 0 && <div className="project-file-list"><strong>{form.files.length} {form.files.length === 1 ? 'archivo seleccionado' : 'archivos seleccionados'}</strong>{form.files.map((file, index) => <span key={`${file.name}-${file.lastModified}`}><span>{file.name}<small>{(file.size / 1024 / 1024).toFixed(1)} MB</small></span><button type="button" aria-label={`Quitar ${file.name}`} onClick={() => removeFile(index)}><X/></button></span>)}</div>}{error && <p className="form-error" role="alert">{error}</p>}<button disabled={saving} className="btn full">{saving ? 'Publicando…' : 'Publicar en resultados'}</button></form></div>
 }
 
 export function AdminPortal({ bookings, setBookings, blockedDates, onBlockDate, onUnblockDate, expenses, onAddExpense, projects, setProjects, systemStatus, onClose }) {

@@ -19,9 +19,8 @@ steps:
       - --memory=512Mi
       - --cpu=1
       - --timeout=300
-
       - --service-account=estudio-auto-calendar@$PROJECT_ID.iam.gserviceaccount.com
-      - --update-env-vars=GOOGLE_CALENDAR_ID=josue.arce.gonzalez@gmail.com,STORAGE_BUCKET=$PROJECT_ID-estudio-auto-evidence,FIREBASE_WEB_API_KEY=${_FIREBASE_WEB_API_KEY}
+      - --update-env-vars=GOOGLE_CALENDAR_ID=josue.arce.gonzalez@gmail.com,STORAGE_BUCKET=$PROJECT_ID-estudio-auto-evidence,FIREBASE_WEB_API_KEY=${_FIREBASE_WEB_API_KEY},ADMIN_EMAIL=josue.arce.gonzalez@gmail.com,ADMIN_PHONE=83629162
 images:
   - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA'
 substitutions:
@@ -29,7 +28,7 @@ substitutions:
   _REPOSITORY: car-detailing
   _SERVICE: proyectocardetailing
   # Es información pública mostrada al cliente; reemplázala por el SINPE real.
-  _SINPE_PHONE: '+506 0000-0000'
+  _SINPE_PHONE: '+506 8362-9162'
   # Firebase Console → Project settings → General → Web API Key.
   _FIREBASE_WEB_API_KEY: CONFIGURE_IN_GCP
 options:
