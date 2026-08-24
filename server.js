@@ -8,7 +8,21 @@ const app = express()
 const port = Number(process.env.PORT || 8080)
 const calendarId = process.env.GOOGLE_CALENDAR_ID || 'josue.arce.gonzalez@gmail.com'
 const timeZone = 'America/Costa_Rica'
-const serviceCatalog = { Esencial: { duration: 90, cost: 25000 }, Signature: { duration: 180, cost: 60000 }, 'Ceramic Pro': { duration: 360, cost: 150000 } }
+
+const serviceCatalog = {
+  'Detallado interior': { duration: 120, cost: 5000 },
+  'Detallado exterior': { duration: 120, cost: 6000 },
+  'Protección cerámica en carrocería': { duration: 360, cost: 50000 },
+  'Protección cerámica en aros': { duration: 90, cost: 10000 },
+  'Protección cerámica en tapizados': { duration: 120, cost: 20000 },
+  'Limpieza profunda de tapizados': { duration: 120, cost: 5000 },
+  'Pulido de vidrios y cerámico': { duration: 120, cost: 10000 },
+  'Restauración de focos': { duration: 90, cost: 6500 },
+  'Pulido de carrocería': { duration: 240, cost: 20000 },
+  'Descontaminación exterior': { duration: 180, cost: 15000 },
+  'Abrillantado de carrocería': { duration: 180, cost: 20000 },
+}
+
 const requiredFields = ['name', 'phone', 'email', 'vehicle', 'service', 'date', 'time']
 const adminEmail = process.env.ADMIN_EMAIL || 'admin@estudioauto.com'
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
@@ -251,7 +265,9 @@ app.get('/api/admin/system-status', requireAdmin, async (_request, response) => 
     if (!checks.firestore.ok) checks.firestore.error = message
     else checks.storage.error = message
   }
-  return response.status(checks.firestore.ok && checks.storage.ok ? 200 : 503).json(checks)
+  const ok = checks.firestore.ok && checks.storage.ok
+  return response.status(ok ? 200 : 503).json({ ok })
+
 })
 
 app.get('/api/admin/operations', requireAdmin, async (_request, response) => {
@@ -308,7 +324,6 @@ app.post('/api/bookings', async (request, response) => {
   if (!serviceCatalog[booking.service]) return response.status(400).json({ error: 'El servicio seleccionado no es válido.' })
   if (!['sinpe', 'cash'].includes(booking.paymentMethod)) return response.status(400).json({ error: 'El método de pago no es válido.' })
   if (booking.paymentMethod === 'sinpe' && (!booking.paymentEvidenceName || !booking.paymentEvidenceData)) return response.status(400).json({ error: 'Debes adjuntar el comprobante de SINPE Móvil.' })
-
 
   let stage = 'availability'
   let uploadedReceipt = ''

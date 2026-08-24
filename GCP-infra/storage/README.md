@@ -145,7 +145,6 @@ tmp/{uploadId}/...
 
 ## Crear recursos
 
-
 Estos recursos **no se crean al desplegar una revisión de Cloud Run**. La aplicación no debe crear infraestructura durante su arranque. Se preparan una sola vez ejecutando `setup.sh`; después, las revisiones nuevas reutilizan la misma base de datos y el mismo bucket. El script es idempotente, por lo que se puede volver a ejecutar sin duplicarlos.
 
 Desde la raíz:
@@ -195,9 +194,10 @@ La cuenta puede volver a abrirse desde otro dispositivo. El servidor intercambia
 3. En Firestore, abre `bookings`: debe aparecer un documento con `calendarEventId`, `status` y `paymentStatus`.
 4. En Cloud Storage, busca `bookings/{id}/payments/`: allí debe estar el comprobante.
 5. Cierra el navegador, abre el panel administrativo e inicia sesión. El panel consulta `/api/admin/bookings` y debe mostrar el documento guardado, aunque `localStorage` esté vacío.
-6. En la parte superior del panel, **Conexión GCP** debe mostrar en verde `Firestore conectado` y el nombre exacto del bucket. Si aparece rojo, el mismo indicador muestra la variable o permiso que falta.
+6. El escudo pequeño del panel aparece verde cuando los servicios internos están disponibles y rojo cuando requieren revisión. Los nombres técnicos y detalles quedan únicamente en Cloud Logging.
 
-Los detalles técnicos de GCP se muestran únicamente en el panel administrativo y en Cloud Logging. Al cliente se le indican acciones concretas —revisar formato/tamaño, volver a intentar o elegir efectivo— sin mencionar proveedores internos.
+Los detalles técnicos se consultan únicamente en Cloud Logging. La interfaz muestra acciones concretas —revisar formato/tamaño, volver a intentar o elegir efectivo— sin mencionar proveedores internos.
+in
 
 También puedes comprobarlo desde Cloud Shell:
 

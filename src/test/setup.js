@@ -15,7 +15,9 @@ beforeEach(() => {
     }
     if (url === '/api/admin/login') return { ok: true, json: async () => ({ ok: true }) }
     if (url === '/api/admin/bookings') return { ok: true, json: async () => ({ bookings: JSON.parse(localStorage.getItem('detail-bookings') || '[]') }) }
-    if (url === '/api/admin/system-status') return { ok: true, json: async () => ({ firestore: { ok: true }, storage: { ok: true, bucket: 'test-evidence' } }) }
+
+    if (url === '/api/admin/system-status') return { ok: true, json: async () => ({ ok: true }) }
+
     if (url === '/api/admin/operations') return { ok: true, json: async () => ({ blockedDates: [], expenses: [] }) }
     if (url === '/api/admin/blocked-dates') return { ok: true, json: async () => ({ date: JSON.parse(options.body).date }) }
     if (url.startsWith('/api/admin/blocked-dates/')) return { ok: true, json: async () => ({ ok: true }) }

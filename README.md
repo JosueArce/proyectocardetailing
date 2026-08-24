@@ -1,6 +1,18 @@
-# Estudio Auto
+# AutoEstudioCR Detailing
 
-Landing page responsiva para un negocio de detallado automotriz. Incluye servicios, precios, productos profesionales, reservación sin registro, cuentas de cliente con vehículos e historial, y un panel administrativo para citas, fechas bloqueadas, ingresos y gastos.
+Aplicación web responsiva para **AutoEstudioCR Detailing**, un negocio costarricense de detallado automotriz. Incluye el catálogo oficial de servicios, precios, productos profesionales, reservación sin registro, cuentas de cliente con vehículos e historial, y un panel administrativo para citas, fechas bloqueadas, ingresos y gastos.
+
+## Catálogo oficial
+
+El catálogo se organiza en tres grupos y utiliza colones costarricenses (CRC):
+
+* **Servicios oficiales:** detallado interior (₡5.000) y detallado exterior (₡6.000).
+* **Tratamientos:** protección cerámica en carrocería (₡50.000), aros (₡10.000) y tapizados (₡20.000).
+* **Servicios adicionales:** limpieza profunda de tapizados (₡5.000), pulido de vidrios y cerámico (₡10.000), restauración de focos (₡6.500), pulido de carrocería (₡20.000), descontaminación exterior (₡15.000) y abrillantado de carrocería (₡20.000).
+
+Los precios están sujetos a cambios según la condición y características del vehículo. Los futuros paquetes o combos combinarán estos servicios individuales y se agregarán como una etapa posterior.
+
+La identidad visual se almacena como SVG versionable en `public/autoestudiocr-logo.svg`. Se evita incluir el PNG binario original porque algunos flujos automatizados de creación de pull requests no admiten archivos binarios en el diff.
 
 El historial permite abrir cada reserva, consultar estado, trabajo realizado y evidencias. Administración puede aprobar, finalizar o cancelar la cita, documentar el trabajo y agregar URLs de fotografías o videos; por ahora se incluyen imágenes demostrativas y posteriormente se reemplazarán por cargas a Cloud Storage.
 
@@ -12,8 +24,10 @@ Las confirmaciones por correo y WhatsApp Business son opcionales y se configuran
 
 El cliente y Josue reciben correo al registrar la cita y también cuando administración la aprueba, cancela, finaliza, documenta el trabajo o agrega evidencias. Las actualizaciones administrativas utilizan una sesión segura HttpOnly y sincronizan el evento de Calendar cuando existe un `calendarEventId`.
 
-El formulario permite seleccionar **SINPE Móvil** o **efectivo**. SINPE solicita un comprobante y ambas opciones mantienen la cita pendiente hasta la revisión administrativa; el pago con tarjeta ya aparece como una opción visual deshabilitada. Administración registra el pago antes de poder terminar el servicio. Antes de desplegar, reemplaza `_SINPE_PHONE` en `GCP-infra/cloudbuild.yaml` por el número real que se mostrará públicamente.
 
+Todos los mensajes visibles para clientes están en español y evitan nombres internos de proveedores. El panel administrativo muestra únicamente un escudo verde o rojo para resumir el estado de los servicios; los detalles técnicos permanecen en Cloud Logging.
+
+El formulario permite seleccionar **SINPE Móvil** o **efectivo**. SINPE solicita un comprobante y ambas opciones mantienen la cita pendiente hasta la revisión administrativa; el pago con tarjeta ya aparece como una opción visual deshabilitada. Administración registra el pago antes de poder terminar el servicio. Antes de desplegar, reemplaza `_SINPE_PHONE` en `GCP-infra/cloudbuild.yaml` por el número real que se mostrará públicamente.
 
 La persistencia utiliza Firestore Native para reservaciones, perfiles, vehículos, gastos y fechas bloqueadas; Firebase Authentication administra identidades y Cloud Storage conserva comprobantes SINPE. El panel administrativo obtiene la operación desde Firestore. Los scripts, reglas, índices, diagramas y pasos de verificación están en [`GCP-infra/storage/`](GCP-infra/storage/README.md).
 
@@ -24,7 +38,6 @@ El despliegue continuo de `main` se crea con `GCP-infra/create-trigger.sh`: cada
 ### Acceso administrativo
 
 El correo administrativo es `admin@estudioauto.com`; la contraseña y el secreto de sesión se configuran en Secret Manager. Las cuentas de cliente utilizan Firebase Authentication y una cookie HttpOnly; Firestore conserva perfiles, vehículos, citas, gastos y fechas bloqueadas.
-
 
 ## Desarrollo
 
@@ -43,7 +56,6 @@ npm run test:coverage
 ```
 
 Los datos operativos se guardan en Firestore y los comprobantes en Cloud Storage. `localStorage` se utiliza únicamente como caché de interfaz; las credenciales de clientes son administradas por Firebase Authentication.
-
 
 ## Google Cloud Run
 

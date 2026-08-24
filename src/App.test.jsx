@@ -6,10 +6,13 @@ describe('sitio de detallado automotriz', () => {
   it('presenta los servicios y sus precios', () => {
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Esencial' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Signature' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Ceramic Pro' })).toBeInTheDocument()
-    expect(screen.getByText('₡60.000')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Detallado interior' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Detallado exterior' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Protección cerámica en carrocería' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Restauración de focos' })).toBeInTheDocument()
+    expect(screen.getByText('₡50.000')).toBeInTheDocument()
+    expect(screen.getByText(/precios están sujetos a cambios/i)).toBeInTheDocument()
+    expect(screen.getAllByRole('img', { name: 'AutoEstudioCR Detailing' })).toHaveLength(2)
   })
 
   it('muestra SINPE, solicita comprobante y mantiene tarjeta en pausa', async () => {
@@ -19,6 +22,7 @@ describe('sitio de detallado automotriz', () => {
     await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
     const dialog = screen.getByRole('dialog')
     expect(within(dialog).getByText('+506 0000-0000')).toBeInTheDocument()
+    expect(within(dialog).getByText('Seleccionar archivo')).toBeInTheDocument()
     expect(within(dialog).getByLabelText(/comprobante sinpe/i)).toBeRequired()
     expect(within(dialog).getByRole('radio', { name: /tarjeta/i })).toBeDisabled()
     const receipt = new File(['receipt'], 'comprobante.pdf', { type: 'application/pdf' })
@@ -62,7 +66,7 @@ describe('sitio de detallado automotriz', () => {
     expect(within(dialog).getByRole('heading', { name: /gracias, sofía/i })).toBeInTheDocument()
     const storedBookings = JSON.parse(localStorage.getItem('detail-bookings'))
     expect(storedBookings).toHaveLength(1)
-    expect(storedBookings[0].cost).toBe(60000)
+    expect(storedBookings[0].cost).toBe(5000)
     expect(fetch).toHaveBeenCalledWith('/api/bookings', expect.objectContaining({ method: 'POST' }))
 
     await user.click(within(dialog).getByRole('button', { name: 'Listo' }))
@@ -72,15 +76,15 @@ describe('sitio de detallado automotriz', () => {
     await user.type(within(login).getByLabelText(/contraseña/i), 'admin123')
     await user.click(within(login).getByRole('button', { name: 'Ingresar' }))
     const admin = screen.getByText('PANEL DE ADMINISTRACIÓN').closest('section')
-    expect(within(admin).getByText('✓ Firestore conectado')).toBeInTheDocument()
-    expect(within(admin).getByText(/Storage: test-evidence/)).toBeInTheDocument()
+    expect(within(admin).getByRole('img', { name: 'Servicios disponibles' })).toBeInTheDocument()
+    expect(admin).not.toHaveTextContent(/GCP|Firestore|Cloud Storage/i)
     fireEvent.change(within(admin).getByLabelText('Mes a consultar'), { target: { value: '2030-05' } })
     expect(within(admin).getByText('Sofía Méndez')).toBeInTheDocument()
     expect(within(admin).getByText('Mazda 3 2024')).toBeInTheDocument()
     expect(within(admin).getByRole('link', { name: /whatsapp/i })).toHaveAttribute('href', expect.stringContaining('88881234'))
     await user.click(within(admin).getByRole('button', { name: /ver reserva y gestionar/i }))
     const detail = screen.getByText('DETALLE DE LA RESERVA').closest('section')
-    expect(within(detail).getByRole('heading', { name: 'Signature' })).toBeInTheDocument()
+    expect(within(detail).getByRole('heading', { name: 'Detallado interior' })).toBeInTheDocument()
     expect(within(detail).getByRole('button', { name: /finalizar/i })).toBeDisabled()
     await user.click(within(detail).getByRole('button', { name: /aprobar/i }))
     expect(fetch).toHaveBeenCalledWith('/api/booking-updates', expect.objectContaining({ method: 'POST' }))
@@ -125,9 +129,7 @@ describe('sitio de detallado automotriz', () => {
     await user.type(within(portal).getByLabelText('Modelo'), 'RAV4')
     await user.type(within(portal).getByLabelText('Año'), '2023')
     await user.click(within(portal).getByRole('button', { name: /agregar vehículo/i }))
-
     expect(fetch).toHaveBeenCalledWith('/api/vehicles', expect.objectContaining({ method: 'POST' }))
-
     expect(within(portal).getByText('Toyota RAV4')).toBeInTheDocument()
   })
 
@@ -156,7 +158,6 @@ describe('sitio de detallado automotriz', () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(await screen.findByRole('button', { name: 'Hola, Ana' }))
-
     const portal = screen.getByRole('dialog')
     await user.click(within(portal).getByRole('button', { name: /abrir detalle de signature/i }))
     expect(screen.getByText('Descontaminación y cera premium.')).toBeInTheDocument()
