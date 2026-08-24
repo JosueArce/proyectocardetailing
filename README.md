@@ -16,7 +16,7 @@ El cliente puede combinar servicios de dos maneras: seleccionándolos directamen
 
 La sección **Resultados que hablan** consulta proyectos publicados en Firestore. Desde administración se puede agregar el nombre, la descripción del trabajo y hasta seis fotografías o videos; Cloud Run guarda los archivos bajo `projects/{projectId}/photos/` y `projects/{projectId}/videos/` en el bucket privado y entrega el contenido mediante la API pública del portafolio.
 
-La identidad visual se almacena como SVG versionable en `public/autoestudiocr-logo.svg`. Se evita incluir el PNG binario original porque algunos flujos automatizados de creación de pull requests no admiten archivos binarios en el diff.
+La identidad visual oficial se almacena como un SVG textual en `public/autoestudiocr-logo.svg`; este contenedor conserva exactamente la imagen proporcionada y evita que el creador de pull requests rechace archivos binarios. El encabezado y el pie utilizan únicamente esta imagen completa, sin duplicar el nombre del negocio con texto adicional.
 
 El historial permite abrir cada reserva, consultar estado, trabajo realizado y evidencias. Administración puede aprobar, finalizar o cancelar la cita, documentar el trabajo y agregar URLs de fotografías o videos; por ahora se incluyen imágenes demostrativas y posteriormente se reemplazarán por cargas a Cloud Storage.
 

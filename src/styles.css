@@ -54,3 +54,13 @@
 .project-file-list button{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border:0;background:#050505;color:#fff;cursor:pointer}
 .project-file-list button:hover{background:#e30613}
 .project-file-list svg{width:15px;height:15px}
+
+/* Logotipo oficial horizontal: reemplaza el emblema y el wordmark separados. */
+.header{padding-left:10px}
+.header .brand-logo{position:relative;align-self:stretch;width:clamp(190px,18vw,250px);height:84px;display:flex;align-items:center;justify-content:flex-start;overflow:hidden}
+.header .brand-logo img{display:block;width:auto;height:100%;object-fit:contain;object-position:left center;border:0;border-radius:0;box-shadow:none;transform:scale(1.22);transform-origin:left center}
+.footer-logo{width:min(320px,82vw);height:auto!important;display:block}
+.footer-logo img{display:block;width:100%!important;height:auto!important;aspect-ratio:2/1;object-fit:contain;border:0!important;border-radius:0!important;box-shadow:none!important}
+@media(max-width:1050px){.header .brand-logo{width:190px;height:74px}}
+@media(max-width:700px){.header{padding-left:6px}.header .brand-logo{width:156px;height:68px}.header .brand-logo img{transform:scale(1.18)}}
+@media(max-width:430px){.header .brand-logo{width:126px;height:66px}}
