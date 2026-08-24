@@ -210,6 +210,8 @@ gcloud run services describe proyectocardetailing \
   --format='yaml(status.latestCreatedRevisionName,status.latestReadyRevisionName,spec.template.spec.containers[0].ports,spec.template.spec.containers[0].resources)'
 ```
 
+Si Cloud Build se detiene antes del despliegue con `PARSE_ERROR` en `src/test/setup.js`, confirma que el build usa el commit más reciente. El Dockerfile ejecuta `node --check src/test/setup.js` antes de Vitest para reportar errores de sintaxis de forma directa; después ejecuta las pruebas y únicamente construye la imagen cuando todas pasan.
+
 
 ## Correo y WhatsApp de confirmación
 

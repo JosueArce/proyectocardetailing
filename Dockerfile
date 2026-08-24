@@ -8,9 +8,9 @@ COPY package*.json ./
 
 RUN npm ci --no-audit --no-fund
 
-
 COPY . .
-RUN npm test && npm run build
+RUN node --check src/test/setup.js && npm test && npm run build
+
 
 # Etapa de ejecución: el servidor crea eventos en Google Calendar y sirve el SPA.
 RUN npm prune --omit=dev

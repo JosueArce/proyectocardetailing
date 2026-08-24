@@ -1,9 +1,5 @@
 import { useEffect, useState } from 'react'
-
 import { ArrowRight, CalendarDays, Car, Check, ChevronRight, Droplets, Headlight, Instagram, Mail, Menu, MessageCircle, PaintShield, Polisher, Seat, ShieldCheck, ShoppingCart, Sparkles, Spray, Wheel, Window, X } from './icons'
-=======
-
-
 import { AccessModal, AdminLogin, AdminPortal, CustomerPortal } from './PortalPanels'
 
 const services = [
@@ -168,7 +164,6 @@ function App() {
       <section className="cta-section"><div><span className="kicker">TU AUTO LO MERECE</span><h2>¿Listo para volver<br/>a <em>enamorarte de tu auto?</em></h2><p>Reserva hoy. Nosotros nos encargamos del resto.</p><button className="btn" onClick={() => openBooking()}>Reservar mi cita <ArrowRight size={18}/></button></div></section>
     </main>
 
-
     <footer><a className="brand brand-logo footer-logo" href="#inicio" aria-label="AutoEstudioCR Detailing, inicio"><img src="/autoestudiocr-logo.svg" alt="AutoEstudioCR Detailing"/><span className="brand-wordmark"><span>AutoEstudio<strong>CR</strong></span><small>DETAILING</small></span></a><p>AutoEstudioCR Detailing es un proyecto costarricense de Josue Arce, dedicado al cuidado automotriz profesional.</p><div className="socials"><a href="mailto:hola@estudioauto.com" aria-label="Correo"><Mail/></a><a href="https://instagram.com" aria-label="Instagram"><Instagram/></a><a href="https://wa.me/50600000000" aria-label="WhatsApp"><MessageCircle/></a></div><small>© 2026 AutoEstudioCR Detailing · Costa Rica · Aviso de privacidad</small></footer>
 
     {cartOpen && <div className="cart-backdrop" onMouseDown={() => setCartOpen(false)}><aside className="service-cart" onMouseDown={event => event.stopPropagation()} aria-label="Carrito de servicios"><div className="cart-heading"><div><span className="kicker">TU SELECCIÓN</span><h2>Servicios</h2></div><button aria-label="Cerrar carrito" onClick={() => setCartOpen(false)}><X/></button></div>{cart.length ? <><div className="cart-items">{cart.map(name => { const item = services.find(service => service.name === name); return <div key={name}><span><strong>{name}</strong><small>{item?.category}</small></span><b>{item?.price}</b><button aria-label={`Quitar ${name}`} onClick={() => toggleCart(name)}><X/></button></div> })}</div><div className="cart-total"><span>Total estimado</span><strong>{crc(services.filter(service => cart.includes(service.name)).reduce((total, service) => total + service.cost, 0))}</strong></div><button className="btn full" onClick={() => openBooking()}>Continuar con la reserva <ArrowRight size={17}/></button><button className="clear-cart" onClick={() => setCart([])}>Vaciar selección</button></> : <div className="cart-empty"><ShoppingCart/><h3>Tu carrito está vacío</h3><p>Agrega uno o varios servicios mientras navegas por el catálogo.</p><button onClick={() => setCartOpen(false)}>Explorar servicios</button></div>}</aside></div>}
@@ -179,7 +174,6 @@ function App() {
     {currentAccount && accessOpen && <CustomerPortal account={currentAccount} bookings={bookings} onAddCar={addCar} onLogout={logout} onClose={() => setAccessOpen(false)}/>}
     {adminLoginOpen && <AdminLogin onClose={() => setAdminLoginOpen(false)} onSuccess={openAdmin}/>}
     {adminOpen && <AdminPortal bookings={bookings} setBookings={setBookings} blockedDates={blockedDates} onBlockDate={saveBlockedDate} onUnblockDate={removeBlockedDate} expenses={expenses} onAddExpense={saveExpense} projects={projects} setProjects={setProjects} systemStatus={systemStatus} onClose={() => setAdminOpen(false)}/>}
-
   </>
 }
 
