@@ -17,7 +17,9 @@ RUN npm prune --omit=dev
 # y responder en el puerto que Cloud Run inyectará en tiempo de ejecución.
 RUN PORT=8080 node server.js & pid=$!; \
   for attempt in 1 2 3 4 5 6 7 8 9 10; do \
-    if wget -q -O /dev/null http://127.0.0.1:8080/health; then kill "$pid"; wait "$pid" || true; exit 0; fi; \
+    if wget -q -O /dev/null http://127.0.0.1:8080/health && \
+       wget -q -O /tmp/logo.svg http://127.0.0.1:8080/autoestudiocr-logo.svg && \
+       grep -q '<svg' /tmp/logo.svg; then kill "$pid"; wait "$pid" || true; exit 0; fi; \
     sleep 1; \
   done; \
   kill "$pid" 2>/dev/null || true; exit 1

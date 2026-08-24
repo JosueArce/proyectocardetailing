@@ -456,8 +456,9 @@ app.post('/api/booking-updates', requireAdmin, async (request, response) => {
   if (!booking?.email || !booking?.service) return response.status(400).json({ error: 'La reservación no es válida.' })
   const updatedBooking = { ...booking, ...changes }
   if (changes.status === 'Completada' && updatedBooking.paymentStatus !== 'Pagado') return response.status(400).json({ error: 'Debes registrar el pago antes de completar la cita.' })
-  try {
-    if (booking.calendarEventId) {
+  const warnings = []
+  if (booking.calendarEventId) {
+    try {
       const calendar = await getCalendar()
       if (changes.status === 'Cancelada') await calendar.events.delete({ calendarId, eventId: booking.calendarEventId })
       else {
@@ -466,19 +467,39 @@ app.post('/api/booking-updates', requireAdmin, async (request, response) => {
         const end = new Date(start.getTime() + duration * 60_000)
         await calendar.events.patch({ calendarId, eventId: booking.calendarEventId, requestBody: { description: [`Estado: ${updatedBooking.status}`, `Cliente: ${updatedBooking.name}`, `Teléfono: ${updatedBooking.phone}`, `Vehículo: ${updatedBooking.vehicle}`, `Servicios: ${(updatedBooking.services || [updatedBooking.service]).join(', ')}`, updatedBooking.workDone ? `Trabajo realizado: ${updatedBooking.workDone}` : ''].filter(Boolean).join('\n'), start: { dateTime: start.toISOString(), timeZone }, end: { dateTime: end.toISOString(), timeZone } } })
       }
+    } catch (error) {
+      warnings.push('No pudimos sincronizar el cambio con la agenda externa. Revisa el evento manualmente.')
+      console.error(JSON.stringify({ severity: 'WARNING', message: 'La cita se actualizará aunque falle la sincronización de agenda', bookingId: booking.id, eventId: booking.calendarEventId, error: error.response?.data?.error || error.message }))
     }
-    const storedBooking = await saveBooking(updatedBooking)
-    const notification = await sendBookingUpdateEmail(storedBooking, changeLabel)
-    console.log(JSON.stringify({ severity: 'INFO', message: 'Actualización de cita notificada', bookingId: booking.id, changeLabel, notification }))
-    return response.json({ booking: storedBooking, notification })
-  } catch (error) {
-    console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudo actualizar o notificar la cita', bookingId: booking.id, error: error.response?.data?.error || error.message }))
-    return response.status(502).json({ error: 'No fue posible actualizar y notificar la cita.' })
   }
+
+  let storedBooking
+  try {
+    storedBooking = await saveBooking(updatedBooking)
+  } catch (error) {
+    console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudo guardar la actualización de la cita', bookingId: booking.id, error: error.response?.data?.error || error.message }))
+    return response.status(502).json({ error: 'No fue posible guardar la actualización de la cita.' })
+  }
+
+  let notification
+  try {
+    notification = await sendBookingUpdateEmail(storedBooking, changeLabel)
+    console.log(JSON.stringify({ severity: 'INFO', message: 'Actualización de cita notificada', bookingId: booking.id, changeLabel, notification }))
+  } catch (error) {
+    warnings.push('La cita fue actualizada, pero no pudimos enviar la notificación por correo.')
+    notification = { channel: 'email', status: 'failed' }
+    console.error(JSON.stringify({ severity: 'WARNING', message: 'La cita se guardó aunque falló la notificación', bookingId: booking.id, error: error.response?.data?.error || error.message }))
+  }
+
+  return response.json({ booking: storedBooking, notification, warning: warnings.join(' ') || undefined })
 })
 
 const root = path.dirname(fileURLToPath(import.meta.url))
 app.use('/assets', express.static(path.join(root, 'dist', 'assets'), { maxAge: '7d', immutable: true }))
+// Vite copia los recursos de public/ a la raíz de dist. Deben servirse antes
+// del fallback SPA para que el logo, favicon y futuros archivos públicos no
+// reciban index.html como respuesta.
+app.use(express.static(path.join(root, 'dist'), { index: false, maxAge: '1h' }))
 app.get(/.*/, (_request, response) => response.sendFile(path.join(root, 'dist', 'index.html')))
 
 const server = app.listen(port, '0.0.0.0', () => console.log(JSON.stringify({ severity: 'INFO', message: `AutoEstudioCR escuchando en el puerto ${port}`, port, nodeEnv: process.env.NODE_ENV || 'development', calendarId, timeZone })))

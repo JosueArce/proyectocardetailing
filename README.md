@@ -16,9 +16,11 @@ El cliente puede combinar servicios de dos maneras: seleccionándolos directamen
 
 La sección **Resultados que hablan** consulta proyectos publicados en Firestore. Desde administración se puede agregar el nombre, la descripción del trabajo y hasta seis fotografías o videos; Cloud Run guarda los archivos bajo `projects/{projectId}/photos/` y `projects/{projectId}/videos/` en el bucket privado y entrega el contenido mediante la API pública del portafolio.
 
-La identidad visual oficial se almacena como un SVG textual en `public/autoestudiocr-logo.svg`; este contenedor conserva exactamente la imagen proporcionada y evita que el creador de pull requests rechace archivos binarios. El encabezado y el pie utilizan únicamente esta imagen completa, sin duplicar el nombre del negocio con texto adicional.
+La identidad visual oficial se almacena como un SVG vectorial en `public/autoestudiocr-logo.svg`; no contiene imágenes binarias embebidas, se mantiene nítido a cualquier tamaño y evita incompatibilidades con el creador de pull requests. El servidor entrega los archivos públicos de Vite desde la raíz de `dist`, antes del fallback de la SPA, para que el navegador reciba el logo como `image/svg+xml` y no como HTML. El encabezado y el pie utilizan únicamente esta imagen completa, sin duplicar el nombre del negocio con texto adicional.
 
 El historial permite abrir cada reserva, consultar estado, trabajo realizado y evidencias. Administración puede aprobar, finalizar o cancelar la cita, documentar el trabajo y agregar URLs de fotografías o videos; por ahora se incluyen imágenes demostrativas y posteriormente se reemplazarán por cargas a Cloud Storage.
+
+Las actualizaciones administrativas guardan primero el estado operativo en Firestore. Una falla al sincronizar la agenda o enviar el correo se presenta como advertencia y no impide aprobar, pagar, finalizar o cancelar la cita. Para finalizar un servicio es obligatorio registrar antes el pago; la interfaz explica este requisito al presionar **Finalizar**.
 
 El prototipo está localizado para Costa Rica: precios, ingresos, gastos y ganancias se presentan en colones costarricenses (CRC). La historia de marca identifica a Josue Arce, de 29 años, como fundador del proyecto.
 
