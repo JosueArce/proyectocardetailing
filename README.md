@@ -12,9 +12,11 @@ El catálogo se organiza en tres grupos y utiliza colones costarricenses (CRC):
 
 Los precios están sujetos a cambios según la condición y características del vehículo. Los futuros paquetes o combos combinarán estos servicios individuales y se agregarán como una etapa posterior.
 
+
 El cliente puede combinar servicios de dos maneras: seleccionándolos directamente dentro del modal de reservación o agregándolos al carrito mientras navega por el catálogo. La selección se conserva localmente hasta completar la cita, y el servidor vuelve a calcular el costo y la duración total usando únicamente el catálogo autorizado.
 
 La sección **Resultados que hablan** consulta proyectos publicados en Firestore. Desde administración se puede agregar el nombre, la descripción del trabajo y hasta seis fotografías o videos; Cloud Run guarda los archivos bajo `projects/{projectId}/photos/` y `projects/{projectId}/videos/` en el bucket privado y entrega el contenido mediante la API pública del portafolio.
+
 
 La identidad visual se almacena como SVG versionable en `public/autoestudiocr-logo.svg`. Se evita incluir el PNG binario original porque algunos flujos automatizados de creación de pull requests no admiten archivos binarios en el diff.
 
@@ -27,6 +29,7 @@ Las reservaciones se conectan con Google Calendar mediante el servidor de Cloud 
 Las confirmaciones por correo y WhatsApp Business son opcionales y se configuran con Secret Manager mediante `GCP-infra/configure-notifications.sh`.
 
 El cliente y Josue reciben correo al registrar la cita y también cuando administración la aprueba, cancela, finaliza, documenta el trabajo o agrega evidencias. Las actualizaciones administrativas utilizan una sesión segura HttpOnly y sincronizan el evento de Calendar cuando existe un `calendarEventId`.
+
 
 Todos los mensajes visibles para clientes están en español y evitan nombres internos de proveedores. El panel administrativo muestra únicamente un escudo verde o rojo para resumir el estado de los servicios; los detalles técnicos permanecen en Cloud Logging.
 
@@ -59,6 +62,7 @@ npm run test:coverage
 ```
 
 El contenedor ejecuta una prueba real del servidor y de `/health` durante la construcción. Cloud Run utiliza 512 MiB y el servidor escucha en la variable `PORT` proporcionada por la plataforma. La guía para diagnosticar una revisión que no inicia está en [`GCP-infra/README.md`](GCP-infra/README.md#la-revisión-no-escucha-en-port8080).
+
 
 Los datos operativos se guardan en Firestore y los comprobantes en Cloud Storage. `localStorage` se utiliza únicamente como caché de interfaz; las credenciales de clientes son administradas por Firebase Authentication.
 

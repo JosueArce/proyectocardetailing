@@ -19,6 +19,7 @@ steps:
       - --memory=512Mi
       - --cpu=1
       - --timeout=300
+
       - --service-account=estudio-auto-calendar@$PROJECT_ID.iam.gserviceaccount.com
       - --update-env-vars=GOOGLE_CALENDAR_ID=josue.arce.gonzalez@gmail.com,STORAGE_BUCKET=$PROJECT_ID-estudio-auto-evidence,FIREBASE_WEB_API_KEY=${_FIREBASE_WEB_API_KEY}
 images:
