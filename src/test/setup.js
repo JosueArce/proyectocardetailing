@@ -27,8 +27,7 @@ beforeEach(() => {
     if (url === '/api/admin/expenses') { const body = JSON.parse(options.body); return { ok: true, json: async () => ({ expense: { ...body, id: 'expense-test' } }) } }
 
     if (url === '/api/admin/projects') { const body = JSON.parse(options.body); return { ok: true, json: async () => ({ project: { id: 'project-test', title: body.title, description: body.description, media: body.media.map((item, index) => ({ type: item.type, url: `/api/projects/project-test/media/${index}` })) } }) } }
-
-    if (url === '/api/booking-updates') {
+= '/api/booking-updates') {
       const body = JSON.parse(options.body)
       return { ok: true, json: async () => ({ booking: { ...body.booking, ...body.changes }, notification: { status: 'sent' } }) }
     }

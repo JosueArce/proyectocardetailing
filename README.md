@@ -61,6 +61,9 @@ npm test
 npm run test:coverage
 ```
 
+El contenedor ejecuta una prueba real del servidor y de `/health` durante la construcción. Cloud Run utiliza 512 MiB y el servidor escucha en la variable `PORT` proporcionada por la plataforma. La guía para diagnosticar una revisión que no inicia está en [`GCP-infra/README.md`](GCP-infra/README.md#la-revisión-no-escucha-en-port8080).
+
+
 Los datos operativos se guardan en Firestore y los comprobantes en Cloud Storage. `localStorage` se utiliza únicamente como caché de interfaz; las credenciales de clientes son administradas por Firebase Authentication.
 
 ## Google Cloud Run

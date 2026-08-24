@@ -475,7 +475,8 @@ app.post('/api/booking-updates', requireAdmin, async (request, response) => {
       const calendar = await getCalendar()
       if (changes.status === 'Cancelada') await calendar.events.delete({ calendarId, eventId: booking.calendarEventId })
       else {
-        const start = new Date(`${updatedBooking.date}T${updatedBooking.t
+
+        const start = new Date(`${updatedBooking.date}T${updatedBooking.time}:00-06:00`)
         const duration = resolveServices(updatedBooking)?.duration || 120
         const end = new Date(start.getTime() + duration * 60_000)
         await calendar.events.patch({ calendarId, eventId: booking.calendarEventId, requestBody: { description: [`Estado: ${updatedBooking.status}`, `Cliente: ${updatedBooking.name}`, `Teléfono: ${updatedBooking.phone}`, `Vehículo: ${updatedBooking.vehicle}`, `Servicios: ${(updatedBooking.services || [updatedBooking.service]).join(', ')}`, updatedBooking.workDone ? `Trabajo realizado: ${updatedBooking.workDone}` : ''].filter(Boolean).join('\n'), start: { dateTime: start.toISOString(), timeZone }, end: { dateTime: end.toISOString(), timeZone } } })
@@ -496,4 +497,10 @@ const root = path.dirname(fileURLToPath(import.meta.url))
 app.use('/assets', express.static(path.join(root, 'dist', 'assets'), { maxAge: '7d', immutable: true }))
 app.get(/.*/, (_request, response) => response.sendFile(path.join(root, 'dist', 'index.html')))
 
-app.listen(port, '0.0.0.0', () => console.log(JSON.stringify({ severity: 'INFO', message: `Estudio Auto escuchando en el puerto ${port}`, calendarId, timeZone })))
+
+const server = app.listen(port, '0.0.0.0', () => console.log(JSON.stringify({ severity: 'INFO', message: `AutoEstudioCR escuchando en el puerto ${port}`, port, nodeEnv: process.env.NODE_ENV || 'development', calendarId, timeZone })))
+server.on('error', error => {
+  console.error(JSON.stringify({ severity: 'CRITICAL', message: 'El servidor no pudo iniciar', port, code: error.code, detail: error.message }))
+  process.exit(1)
+})
+
