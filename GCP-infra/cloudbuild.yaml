@@ -1,0 +1,33 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '--build-arg', 'VITE_SINPE_PHONE=${_SINPE_PHONE}', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA', '.']
+  - name: gcr.io/cloud-builders/docker
+    args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA']
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --min-instances=0
+      - --max-instances=3
+      - --memory=256Mi
+      - --service-account=estudio-auto-calendar@$PROJECT_ID.iam.gserviceaccount.com
+      - --update-env-vars=GOOGLE_CALENDAR_ID=josue.arce.gonzalez@gmail.com,STORAGE_BUCKET=$PROJECT_ID-estudio-auto-evidence,FIREBASE_WEB_API_KEY=${_FIREBASE_WEB_API_KEY}
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA'
+substitutions:
+  _REGION: us-west1
+  _REPOSITORY: car-detailing
+  _SERVICE: proyectocardetailing
+  # Es información pública mostrada al cliente; reemplázala por el SINPE real.
+  _SINPE_PHONE: '+506 0000-0000'
+  # Firebase Console → Project settings → General → Web API Key.
+  _FIREBASE_WEB_API_KEY: CONFIGURE_IN_GCP
+options:
+  logging: CLOUD_LOGGING_ONLY
