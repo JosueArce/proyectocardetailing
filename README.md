@@ -24,6 +24,7 @@ Las confirmaciones por correo y WhatsApp Business son opcionales y se configuran
 
 El cliente y Josue reciben correo al registrar la cita y también cuando administración la aprueba, cancela, finaliza, documenta el trabajo o agrega evidencias. Las actualizaciones administrativas utilizan una sesión segura HttpOnly y sincronizan el evento de Calendar cuando existe un `calendarEventId`.
 
+
 Todos los mensajes visibles para clientes están en español y evitan nombres internos de proveedores. El panel administrativo muestra únicamente un escudo verde o rojo para resumir el estado de los servicios; los detalles técnicos permanecen en Cloud Logging.
 
 El formulario permite seleccionar **SINPE Móvil** o **efectivo**. SINPE solicita un comprobante y ambas opciones mantienen la cita pendiente hasta la revisión administrativa; el pago con tarjeta ya aparece como una opción visual deshabilitada. Administración registra el pago antes de poder terminar el servicio. Antes de desplegar, reemplaza `_SINPE_PHONE` en `GCP-infra/cloudbuild.yaml` por el número real que se mostrará públicamente.

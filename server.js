@@ -8,6 +8,7 @@ const app = express()
 const port = Number(process.env.PORT || 8080)
 const calendarId = process.env.GOOGLE_CALENDAR_ID || 'josue.arce.gonzalez@gmail.com'
 const timeZone = 'America/Costa_Rica'
+
 const serviceCatalog = {
   'Detallado interior': { duration: 120, cost: 5000 },
   'Detallado exterior': { duration: 120, cost: 6000 },
@@ -21,11 +22,14 @@ const serviceCatalog = {
   'Descontaminación exterior': { duration: 180, cost: 15000 },
   'Abrillantado de carrocería': { duration: 180, cost: 20000 },
 }
+
 const requiredFields = ['name', 'phone', 'email', 'vehicle', 'service', 'date', 'time']
 const adminEmail = process.env.ADMIN_EMAIL || 'admin@estudioauto.com'
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
 const sessionSecret = process.env.SESSION_SECRET || 'development-only-change-me'
+
 const firebaseApiKey = process.env.FIREBASE_WEB_API_KEY || ''
+
 
 // googleapis es una dependencia grande. Se carga solo cuando una petición necesita
 // Calendar para que una instancia de Cloud Run con poca memoria pueda iniciar y
@@ -175,6 +179,7 @@ app.post('/api/admin/login', (request, response) => {
   return response.json({ ok: true })
 })
 
+
 app.post('/api/auth/register', async (request, response) => {
   const { name, email, phone, password } = request.body || {}
   if (!name || !email || !phone || !password || password.length < 6) return response.status(400).json({ error: 'Completa todos los datos y usa una contraseña de al menos 6 caracteres.' })
@@ -262,6 +267,7 @@ app.get('/api/admin/system-status', requireAdmin, async (_request, response) => 
   }
   const ok = checks.firestore.ok && checks.storage.ok
   return response.status(ok ? 200 : 503).json({ ok })
+
 })
 
 app.get('/api/admin/operations', requireAdmin, async (_request, response) => {

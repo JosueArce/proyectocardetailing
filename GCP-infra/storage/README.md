@@ -197,6 +197,7 @@ La cuenta puede volver a abrirse desde otro dispositivo. El servidor intercambia
 6. El escudo pequeño del panel aparece verde cuando los servicios internos están disponibles y rojo cuando requieren revisión. Los nombres técnicos y detalles quedan únicamente en Cloud Logging.
 
 Los detalles técnicos se consultan únicamente en Cloud Logging. La interfaz muestra acciones concretas —revisar formato/tamaño, volver a intentar o elegir efectivo— sin mencionar proveedores internos.
+in
 
 También puedes comprobarlo desde Cloud Shell:
 

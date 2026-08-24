@@ -119,9 +119,11 @@ describe('sitio de detallado automotriz', () => {
     await user.type(within(access).getByLabelText(/correo/i), 'ana@example.com')
     await user.type(within(access).getByLabelText(/contraseña/i), 'secreto1')
     await user.click(within(access).getByRole('button', { name: 'Crear cuenta' }))
+
     expect(fetch).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({ method: 'POST' }))
     expect(localStorage.getItem('detail-accounts')).toBeNull()
     await user.click(await screen.findByRole('button', { name: 'Hola, Ana' }))
+
     const portal = screen.getByRole('dialog')
     await user.type(within(portal).getByLabelText('Marca'), 'Toyota')
     await user.type(within(portal).getByLabelText('Modelo'), 'RAV4')

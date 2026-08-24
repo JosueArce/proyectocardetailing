@@ -26,6 +26,7 @@ const gallery = [
 
 const sinpePhone = import.meta.env.VITE_SINPE_PHONE || '+506 0000-0000'
 const emptyForm = { name: '', phone: '', email: '', vehicle: '', service: 'Detallado interior', date: '', time: '', notes: '', whatsappOptIn: false, paymentMethod: 'sinpe', paymentStatus: 'Pendiente', paymentEvidenceName: '', paymentEvidenceData: '' }
+
 const minBookingDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
 
 function App() {
@@ -90,6 +91,7 @@ function App() {
 
   return <>
     <header className="header">
+
       <a className="brand brand-logo" href="#inicio" aria-label="AutoEstudioCR Detailing, inicio"><img src="/autoestudiocr-logo.svg" alt="AutoEstudioCR Detailing"/></a>
       <nav className={menu ? 'nav open' : 'nav'} aria-label="Navegación principal">
         <a href="#servicios" onClick={() => setMenu(false)}>Servicios</a><a href="#galeria" onClick={() => setMenu(false)}>Resultados</a><a href="#proceso" onClick={() => setMenu(false)}>Proceso</a><a href="#opiniones" onClick={() => setMenu(false)}>Opiniones</a>
