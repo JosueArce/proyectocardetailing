@@ -19,6 +19,8 @@ export const Headlight = icon(<><path d="M14 7c-5 0-8 2-8 5s3 5 8 5c2 0 4-2 4-5s
 export const Polisher = icon(<><rect x="4" y="8" width="14" height="7" rx="2"/><path d="M9 8V5h6v3M18 10h3v3h-3M7 15v3h8v-3"/></>)
 export const Spray = icon(<><path d="M9 7h7l2 3v10H6V10l3-3Z"/><path d="M11 7V4h5M16 4l3 1M9 12h6"/></>)
 
+export const ShoppingCart = icon(<><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 4h2l2.4 10.4A2 2 0 0 0 9.3 16H18a2 2 0 0 0 1.9-1.4L22 8H6"/></>)
+
 export const CalendarDays = icon(<><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></>)
 export const Car = icon(<><path d="m5 17-2-2V9l2-5h14l2 5v6l-2 2H5Z"/><path d="M3 10h18M7 14h.01M17 14h.01M5 17v3M19 17v3"/></>)
 export const Clock3 = icon(<><circle cx="12" cy="12" r="9"/><path d="M12 7v5h4"/></>)

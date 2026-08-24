@@ -12,6 +12,12 @@ El catálogo se organiza en tres grupos y utiliza colones costarricenses (CRC):
 
 Los precios están sujetos a cambios según la condición y características del vehículo. Los futuros paquetes o combos combinarán estos servicios individuales y se agregarán como una etapa posterior.
 
+
+El cliente puede combinar servicios de dos maneras: seleccionándolos directamente dentro del modal de reservación o agregándolos al carrito mientras navega por el catálogo. La selección se conserva localmente hasta completar la cita, y el servidor vuelve a calcular el costo y la duración total usando únicamente el catálogo autorizado.
+
+La sección **Resultados que hablan** consulta proyectos publicados en Firestore. Desde administración se puede agregar el nombre, la descripción del trabajo y hasta seis fotografías o videos; Cloud Run guarda los archivos bajo `projects/{projectId}/photos/` y `projects/{projectId}/videos/` en el bucket privado y entrega el contenido mediante la API pública del portafolio.
+
+
 La identidad visual se almacena como SVG versionable en `public/autoestudiocr-logo.svg`. Se evita incluir el PNG binario original porque algunos flujos automatizados de creación de pull requests no admiten archivos binarios en el diff.
 
 El historial permite abrir cada reserva, consultar estado, trabajo realizado y evidencias. Administración puede aprobar, finalizar o cancelar la cita, documentar el trabajo y agregar URLs de fotografías o videos; por ahora se incluyen imágenes demostrativas y posteriormente se reemplazarán por cargas a Cloud Storage.

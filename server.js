@@ -23,11 +23,21 @@ const serviceCatalog = {
   'Abrillantado de carrocería': { duration: 180, cost: 20000 },
 }
 
-const requiredFields = ['name', 'phone', 'email', 'vehicle', 'service', 'date', 'time']
+const requiredFields = ['name', 'phone', 'email', 'vehicle', 'date', 'time']
+const resolveServices = booking => {
+  const requested = Array.isArray(booking.services) ? booking.services : [booking.service]
+  const names = [...new Set(requested.map(value => String(value || '').trim()).filter(Boolean))]
+  if (!names.length || names.some(name => !serviceCatalog[name])) return null
+  return {
+    names,
+    label: names.join(' + '),
+    cost: names.reduce((total, name) => total + serviceCatalog[name].cost, 0),
+    duration: names.reduce((total, name) => total + serviceCatalog[name].duration, 0),
+  }
+}
 const adminEmail = process.env.ADMIN_EMAIL || 'admin@estudioauto.com'
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
 const sessionSecret = process.env.SESSION_SECRET || 'development-only-change-me'
-
 const firebaseApiKey = process.env.FIREBASE_WEB_API_KEY || ''
 
 
@@ -137,8 +147,26 @@ const deleteReceipt = async objectName => {
   }
 }
 
+
+const uploadProjectMedia = async (item, projectId, index) => {
+  const match = /^data:(image\/(?:jpeg|png|webp)|video\/(?:mp4|webm));base64,([A-Za-z0-9+/=]+)$/.exec(item.data || '')
+  if (!match) throw new Error('Los proyectos aceptan JPG, PNG, WEBP, MP4 o WEBM.')
+  const body = Buffer.from(match[2], 'base64')
+  if (body.length > 15 * 1024 * 1024) throw new Error('Cada archivo debe pesar menos de 15 MB.')
+  const bucket = process.env.STORAGE_BUCKET
+  if (!bucket) throw new Error('El almacenamiento de proyectos no está configurado.')
+  const type = match[1].startsWith('video/') ? 'video' : 'image'
+  const safeName = String(item.name || `archivo-${index}`).replace(/[^a-zA-Z0-9._-]/g, '_')
+  const objectName = `projects/${projectId}/${type === 'video' ? 'videos' : 'photos'}/${String(index + 1).padStart(2, '0')}-${safeName}`
+  const { auth } = await getGoogleServices()
+  const client = await auth.getClient()
+  await client.request({ url: `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(bucket)}/o?uploadType=media&name=${encodeURIComponent(objectName)}`, method: 'POST', headers: { 'Content-Type': match[1], 'Content-Length': String(body.length) }, data: body })
+  return { type, storagePath: objectName, mimeType: match[1], url: `/api/projects/${projectId}/media/${index}` }
+}
+
 app.disable('x-powered-by')
-app.use(express.json({ limit: '8mb' }))
+app.use(express.json({ limit: '30mb' }))
+
 
 app.get('/health', (_request, response) => response.type('text').send('ok'))
 
@@ -235,6 +263,52 @@ app.post('/api/vehicles', requireCustomer, async (request, response) => {
   }
 })
 
+
+app.get('/api/projects', async (_request, response) => {
+  try {
+    const projects = (await listCollection('projects')).filter(project => project.published !== false).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    return response.json({ projects })
+  } catch (error) {
+    console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudieron consultar los proyectos', detail: error.response?.data?.error || error.message }))
+    return response.status(502).json({ error: 'No pudimos cargar los proyectos en este momento.' })
+  }
+})
+
+app.get('/api/projects/:projectId/media/:mediaIndex', async (request, response) => {
+  try {
+    const project = await getDocument('projects', request.params.projectId)
+    if (project.published === false) return response.status(404).end()
+    const media = project.media?.[Number(request.params.mediaIndex)]
+    if (!media?.storagePath || !process.env.STORAGE_BUCKET) return response.status(404).end()
+    const { auth } = await getGoogleServices()
+    const client = await auth.getClient()
+    const result = await client.request({ url: `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(process.env.STORAGE_BUCKET)}/o/${encodeURIComponent(media.storagePath)}?alt=media`, method: 'GET', responseType: 'stream' })
+    response.setHeader('Content-Type', media.mimeType || (media.type === 'video' ? 'video/mp4' : 'image/jpeg'))
+    response.setHeader('Cache-Control', 'public, max-age=86400')
+    return result.data.pipe(response)
+  } catch (error) {
+    console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudo entregar un archivo del proyecto', detail: error.response?.data?.error || error.message }))
+    return response.status(404).end()
+  }
+})
+
+app.post('/api/admin/projects', requireAdmin, async (request, response) => {
+  const { title, description, media = [] } = request.body || {}
+  if (!String(title || '').trim() || !String(description || '').trim()) return response.status(400).json({ error: 'Agrega el nombre y la descripción del proyecto.' })
+  if (!Array.isArray(media) || !media.length || media.length > 6) return response.status(400).json({ error: 'Selecciona entre 1 y 6 fotografías o videos.' })
+  const id = crypto.randomUUID()
+  try {
+    const uploadedMedia = []
+    for (const [index, item] of media.entries()) uploadedMedia.push(await uploadProjectMedia(item, id, index))
+    const project = await saveDocument('projects', id, { title: String(title).trim(), description: String(description).trim(), media: uploadedMedia, published: true, createdAt: new Date().toISOString() }, true)
+    return response.status(201).json({ project })
+  } catch (error) {
+    console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudo publicar el proyecto', projectId: id, detail: error.response?.data?.error || error.message }))
+    return response.status(502).json({ error: error.message?.includes('15 MB') ? error.message : 'No pudimos publicar el proyecto. Revisa los archivos e intenta nuevamente.' })
+  }
+})
+
+
 app.get('/api/admin/bookings', requireAdmin, async (_request, response) => {
   try {
     const { projectId, firestore } = await getGoogleServices()
@@ -321,19 +395,33 @@ app.post('/api/bookings', async (request, response) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(booking.date) || !/^\d{2}:\d{2}$/.test(booking.time)) {
     return response.status(400).json({ error: 'La fecha o la hora no tienen un formato válido.' })
   }
-  if (!serviceCatalog[booking.service]) return response.status(400).json({ error: 'El servicio seleccionado no es válido.' })
+
+  const selection = resolveServices(booking)
+  if (!selection) return response.status(400).json({ error: 'Selecciona al menos un servicio válido.' })
+
   if (!['sinpe', 'cash'].includes(booking.paymentMethod)) return response.status(400).json({ error: 'El método de pago no es válido.' })
   if (booking.paymentMethod === 'sinpe' && (!booking.paymentEvidenceName || !booking.paymentEvidenceData)) return response.status(400).json({ error: 'Debes adjuntar el comprobante de SINPE Móvil.' })
 
   let stage = 'availability'
   let uploadedReceipt = ''
   try {
-    const { duration, cost } = serviceCatalog[booking.service]
+
+    const { names, label, duration, cost } = selection
     const [existingBookings, blockedDates] = await Promise.all([listCollection('bookings'), listCollection('blockedDates')])
     if (blockedDates.some(item => item.date === booking.date)) return response.status(409).json({ error: 'Esa fecha no está disponible. Elige otro día.' })
-    if (existingBookings.some(item => item.date === booking.date && item.time === booking.time && !['Cancelada', 'cancelled'].includes(item.status))) return response.status(409).json({ error: 'Ese horario acaba de ocuparse. Elige otra hora disponible.' })
+    const requestedStart = new Date(`${booking.date}T${booking.time}:00-06:00`)
+    const requestedEnd = new Date(requestedStart.getTime() + duration * 60_000)
+    const overlaps = existingBookings.some(item => {
+      if (item.date !== booking.date || ['Cancelada', 'cancelled'].includes(item.status)) return false
+      const existingStart = new Date(`${item.date}T${item.time}:00-06:00`)
+      const existingDuration = resolveServices(item)?.duration || 120
+      const existingEnd = new Date(existingStart.getTime() + existingDuration * 60_000)
+      return requestedStart < existingEnd && requestedEnd > existingStart
+    })
+    if (overlaps) return response.status(409).json({ error: 'Ese horario no tiene tiempo suficiente para todos los servicios seleccionados. Elige otra hora disponible.' })
     const customerId = readCustomerSession(request)
-    const confirmedBooking = { ...booking, id: crypto.randomUUID(), customerId, cost, status: 'Pendiente', paymentStatus: 'Pendiente', createdAt: new Date().toISOString() }
+    const confirmedBooking = { ...booking, services: names, service: label, id: crypto.randomUUID(), customerId, cost, status: 'Pendiente', paymentStatus: 'Pendiente', createdAt: new Date().toISOString() }
+
     if (booking.paymentMethod === 'sinpe') {
       stage = 'storage'
       uploadedReceipt = await uploadReceipt(booking.paymentEvidenceData, booking.paymentEvidenceName, confirmedBooking.id)
@@ -342,13 +430,15 @@ app.post('/api/bookings', async (request, response) => {
     delete confirmedBooking.paymentEvidenceData
     stage = 'calendar'
     const calendar = await getCalendar()
-    const start = new Date(`${booking.date}T${booking.time}:00-06:00`)
-    const end = new Date(start.getTime() + duration * 60_000)
+
+    const start = requestedStart
+    const end = requestedEnd
     const event = await calendar.events.insert({
       calendarId,
       requestBody: {
-        summary: `${booking.service} · ${booking.vehicle}`,
-        description: [`Cliente: ${booking.name}`, `Teléfono: ${booking.phone}`, `Vehículo: ${booking.vehicle}`, `Servicio: ${booking.service}`, `Costo: ₡${cost.toLocaleString('es-CR')}`, `Pago: ${booking.paymentMethod === 'sinpe' ? 'SINPE Móvil' : 'Efectivo'} · Pendiente`, booking.notes ? `Notas: ${booking.notes}` : ''].filter(Boolean).join('\n'),
+        summary: `${label} · ${booking.vehicle}`,
+        description: [`Cliente: ${booking.name}`, `Teléfono: ${booking.phone}`, `Vehículo: ${booking.vehicle}`, `Servicios: ${names.join(', ')}`, `Costo total: ₡${cost.toLocaleString('es-CR')}`, `Pago: ${booking.paymentMethod === 'sinpe' ? 'SINPE Móvil' : 'Efectivo'} · Pendiente`, booking.notes ? `Notas: ${booking.notes}` : ''].filter(Boolean).join('\n'),
+
         start: { dateTime: start.toISOString(), timeZone },
         end: { dateTime: end.toISOString(), timeZone },
       },
@@ -385,10 +475,11 @@ app.post('/api/booking-updates', requireAdmin, async (request, response) => {
       const calendar = await getCalendar()
       if (changes.status === 'Cancelada') await calendar.events.delete({ calendarId, eventId: booking.calendarEventId })
       else {
-        const start = new Date(`${updatedBooking.date}T${updatedBooking.time}:00-06:00`)
-        const duration = serviceCatalog[updatedBooking.service]?.duration || 120
+        const start = new Date(`${updatedBooking.date}T${updatedBooking.t
+        const duration = resolveServices(updatedBooking)?.duration || 120
         const end = new Date(start.getTime() + duration * 60_000)
-        await calendar.events.patch({ calendarId, eventId: booking.calendarEventId, requestBody: { description: [`Estado: ${updatedBooking.status}`, `Cliente: ${updatedBooking.name}`, `Teléfono: ${updatedBooking.phone}`, `Vehículo: ${updatedBooking.vehicle}`, `Servicio: ${updatedBooking.service}`, updatedBooking.workDone ? `Trabajo realizado: ${updatedBooking.workDone}` : ''].filter(Boolean).join('\n'), start: { dateTime: start.toISOString(), timeZone }, end: { dateTime: end.toISOString(), timeZone } } })
+        await calendar.events.patch({ calendarId, eventId: booking.calendarEventId, requestBody: { description: [`Estado: ${updatedBooking.status}`, `Cliente: ${updatedBooking.name}`, `Teléfono: ${updatedBooking.phone}`, `Vehículo: ${updatedBooking.vehicle}`, `Servicios: ${(updatedBooking.services || [updatedBooking.service]).join(', ')}`, updatedBooking.workDone ? `Trabajo realizado: ${updatedBooking.workDone}` : ''].filter(Boolean).join('\n'), start: { dateTime: start.toISOString(), timeZone }, end: { dateTime: end.toISOString(), timeZone } } })
+
       }
     }
     const storedBooking = await saveBooking(updatedBooking)
