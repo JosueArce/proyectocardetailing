@@ -172,6 +172,30 @@ export REGION="us-west1"
 
 El script es idempotente, crea Firestore solo si no existe, crea un bucket privado, aplica ciclo de vida y asigna permisos a la cuenta de Cloud Run.
 
+### Reiniciar todos los datos de prueba
+
+El comportamiento normal nunca elimina información. Para regresar deliberadamente a un estado inicial vacío, utiliza el flag explícito `--hard-reset`:
+
+```bash
+export PROJECT_ID="tu-id-de-proyecto"
+export REGION="us-west1"
+./GCP-infra/storage/setup.sh --hard-reset
+```
+
+El script muestra una advertencia y espera cinco segundos antes de borrar permanentemente:
+
+* usuarios de Firebase Authentication;
+* todos los documentos y subcolecciones de Firestore;
+* todos los objetos del bucket de la aplicación, incluidos comprobantes, fotos y videos.
+
+Después vuelve a crear los marcadores vacíos de `projects/`. No elimina el proyecto GCP, la base de datos, el bucket, índices, reglas, cuentas de servicio, secretos, eventos de Google Calendar ni recursos externos de Resend o WhatsApp. La eliminación no se puede deshacer; realiza un respaldo si necesitas conservar algo. Sin `--hard-reset`, ejecutar `setup.sh` mantiene todos los datos existentes.
+
+Consulta las opciones disponibles con:
+
+```bash
+./GCP-infra/storage/setup.sh --help
+```
+
 Puedes ejecutarlo desde **Cloud Shell** o desde una Mac con `gcloud` autenticado. Cloud Build tampoco lo ejecuta en cada merge: `cloudbuild.yaml` solamente construye y despliega la aplicación, evitando que la cuenta del pipeline necesite permisos administrativos permanentes para crear bases de datos o modificar IAM.
 
 ## Desplegar índices y reglas

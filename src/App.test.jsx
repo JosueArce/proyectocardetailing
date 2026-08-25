@@ -13,6 +13,8 @@ describe('sitio de detallado automotriz', () => {
     expect(screen.getByText('₡50.000')).toBeInTheDocument()
     expect(screen.getByText(/precios están sujetos a cambios/i)).toBeInTheDocument()
     expect(screen.getAllByRole('img', { name: 'AutoEstudioCR Detailing' })).toHaveLength(2)
+    expect(screen.getByRole('heading', { name: 'Entrega y recomendaciones' })).toBeInTheDocument()
+    expect(screen.getByText('PROCESO COMPLETADO')).toBeInTheDocument()
   })
 
   it('muestra SINPE, solicita comprobante y mantiene tarjeta en pausa', async () => {

@@ -40,6 +40,8 @@ La persistencia utiliza Firestore Native para reservaciones, perfiles, vehículo
 
 Firestore y el bucket no se crean durante cada deploy. Se preparan una sola vez con `./GCP-infra/storage/setup.sh`; las siguientes revisiones de Cloud Run reutilizan esos recursos.
 
+Para eliminar deliberadamente todos los datos de prueba de Firebase Authentication, Firestore y Cloud Storage se puede ejecutar `./GCP-infra/storage/setup.sh --hard-reset`. El flag es obligatorio para borrar; una ejecución normal nunca elimina datos. Consulta el alcance y las advertencias en [`GCP-infra/storage/README.md`](GCP-infra/storage/README.md#reiniciar-todos-los-datos-de-prueba).
+
 El despliegue continuo de `main` se crea con `GCP-infra/create-trigger.sh`: cada merge aprobado genera una imagen identificada por el SHA del commit y una nueva revisión de Cloud Run.
 
 ### Acceso administrativo

@@ -71,3 +71,8 @@
 .action-guidance{margin:14px 0 8px;padding:11px 13px;border-left:4px solid #e30613;background:#050505;color:#fff;font-size:11px;line-height:1.5}
 .detail-actions button[aria-disabled="true"]{opacity:.58;cursor:not-allowed}
 .form-notice{margin:12px 0;padding:11px 13px;border:1px solid #050505;background:#fff;color:#050505;font-size:11px;line-height:1.5}
+
+/* El proceso usa tarjetas completas para que el cuarto paso nunca quede cortado. */
+.process{overflow:hidden}.process .section-head{margin-bottom:42px}.process .steps{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.process .step{min-width:0;min-height:285px;padding:30px 26px 26px;border:1px solid #ffffff38;background:#0d0d0d;display:flex;flex-direction:column}.process .step>span{position:static;align-self:flex-end;margin-bottom:18px;padding:5px 8px;background:#fff;color:#050505;font-size:9px;font-weight:800;letter-spacing:.12em}.process .step-icon{margin-bottom:24px}.process .step h3{margin:0 0 14px;color:#fff;font-size:19px}.process .step p{max-width:none;margin:0;color:#ffffffb3;line-height:1.7}.process .step-final{border-color:#e30613;box-shadow:inset 0 -5px 0 #e30613}.process .step-final>span{background:#e30613;color:#fff}.process .step-final small{margin-top:auto;padding-top:24px;color:#e30613;font-size:8px;font-weight:800;letter-spacing:.18em}
+@media(max-width:900px){.process .steps{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.process .step{min-height:260px}}
+@media(max-width:560px){.process .steps{grid-template-columns:1fr}.process .step{min-height:0}.process .step-final small{margin-top:24px}}
