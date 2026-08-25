@@ -16,6 +16,8 @@ El cliente puede combinar servicios de dos maneras: seleccionándolos directamen
 
 La sección **Resultados que hablan** consulta proyectos publicados en Firestore. Desde administración se puede agregar el nombre, la descripción del trabajo y hasta seis fotografías o videos; Cloud Run guarda los archivos bajo `projects/{projectId}/photos/` y `projects/{projectId}/videos/` en el bucket privado y entrega el contenido mediante la API pública del portafolio.
 
+También se reconocen archivos agregados directamente desde la consola de Cloud Storage. Para que se relacionen con un proyecto existente deben conservar exactamente su ID de Firestore y esta estructura: `projects/{projectId}/photos/archivo.jpg` o `projects/{projectId}/videos/archivo.mp4`. La API reconstruye la galería desde el contenido real del bucket cada vez que se carga la lista de proyectos; subir el archivo fuera de esos prefijos no modifica la descripción ni crea un proyecto nuevo.
+
 La identidad visual oficial se almacena como un SVG vectorial en `public/autoestudiocr-logo.svg`; no contiene imágenes binarias embebidas, se mantiene nítido a cualquier tamaño y evita incompatibilidades con el creador de pull requests. El servidor entrega los archivos públicos de Vite desde la raíz de `dist`, antes del fallback de la SPA, para que el navegador reciba el logo como `image/svg+xml` y no como HTML. El encabezado y el pie utilizan únicamente esta imagen completa, sin duplicar el nombre del negocio con texto adicional.
 
 El historial permite abrir cada reserva, consultar estado, trabajo realizado y evidencias. Administración puede aprobar, finalizar o cancelar la cita, documentar el trabajo y agregar URLs de fotografías o videos; por ahora se incluyen imágenes demostrativas y posteriormente se reemplazarán por cargas a Cloud Storage.
@@ -65,6 +67,20 @@ npm run test:coverage
 El contenedor ejecuta una prueba real del servidor y de `/health` durante la construcción. Cloud Run utiliza 512 MiB y el servidor escucha en la variable `PORT` proporcionada por la plataforma. La guía para diagnosticar una revisión que no inicia está en [`GCP-infra/README.md`](GCP-infra/README.md#la-revisión-no-escucha-en-port8080).
 
 Los datos operativos se guardan en Firestore y los comprobantes en Cloud Storage. `localStorage` se utiliza únicamente como caché de interfaz; las credenciales de clientes son administradas por Firebase Authentication.
+
+## Aparición en Google y opiniones
+
+El sitio incluye metadatos en español para buscadores y redes sociales, datos estructurados de negocio local, `robots.txt` y `sitemap.xml`. Para completar la indexación:
+
+1. Define `PUBLIC_SITE_URL` con el dominio público definitivo, preferiblemente un dominio propio.
+2. Registra y verifica ese dominio en Google Search Console.
+3. Envía `https://TU_DOMINIO/sitemap.xml` desde Search Console.
+4. Completa Google Business Profile con dirección o zona de servicio, horario, teléfono, fotografías y el enlace de reserva.
+5. Publica proyectos reales con títulos y descripciones útiles de forma periódica.
+
+La sección **Opiniones** consulta reseñas públicas de Google Maps mediante Places API (New). Configura `GOOGLE_PLACE_ID` y guarda `GOOGLE_MAPS_API_KEY` como secreto de Cloud Run; restringe esa clave a Places API y al proyecto GCP. La respuesta se conserva en caché durante una hora y, si Google no está configurado o no responde, la web presenta una opinión local de respaldo sin mostrar fallos técnicos. Google determina cuáles y cuántas reseñas devuelve; el botón de la sección permite abrir el perfil, consultar todas y escribir una nueva.
+
+Las reseñas deben conservar el autor, texto y calificación originales. Para publicar testimonios recibidos directamente fuera de Google, solicita consentimiento explícito y utiliza un flujo de moderación antes de hacerlos públicos.
 
 ## Google Cloud Run
 

@@ -31,7 +31,7 @@ describe('sitio de detallado automotriz', () => {
   })
 
   it('presenta errores de comprobante en lenguaje útil para el cliente', async () => {
-    fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Sin sesión' }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ projects: [] }) }).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.' }) })
+    fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Sin sesión' }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ projects: [] }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ reviews: [] }) }).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.' }) })
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])

@@ -23,6 +23,7 @@ const sampleProjects = [
   { id: 'demo-pintura', title: 'Detalle de pintura', description: 'Pulido de carrocería para recuperar profundidad, reflejo y presencia.', media: [{ type: 'image', url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=900&q=85' }] },
   { id: 'demo-acabado', title: 'Acabado profesional', description: 'Protección final y revisión minuciosa antes de entregar el vehículo.', media: [{ type: 'image', url: 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?auto=format&fit=crop&w=900&q=85' }] },
 ]
+const sampleReviews = [{ id: 'demo-review', author: 'Cliente de AutoEstudioCR', rating: 5, text: 'La atención fue excelente y el vehículo quedó impecable. Se nota el cuidado en cada detalle.', relativeTime: 'Opinión destacada' }]
 
 const sinpePhone = import.meta.env.VITE_SINPE_PHONE || '+506 8362-9162'
 const emptyForm = { name: '', phone: '', email: '', vehicle: '', services: [], date: '', time: '', notes: '', whatsappOptIn: false, paymentMethod: 'sinpe', paymentStatus: 'Pendiente', paymentEvidenceName: '', paymentEvidenceData: '' }
@@ -48,6 +49,8 @@ function App() {
   const [expenses, setExpenses] = useState(() => JSON.parse(localStorage.getItem('detail-expenses') || '[]'))
   const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem('detail-service-cart') || '[]').filter(name => services.some(service => service.name === name)))
   const [projects, setProjects] = useState(sampleProjects)
+  const [reviews, setReviews] = useState(sampleReviews)
+  const [reviewsUrl, setReviewsUrl] = useState('')
 
   useEffect(() => { localStorage.setItem('detail-bookings', JSON.stringify(bookings)) }, [bookings])
   useEffect(() => { localStorage.setItem('detail-blocked-dates', JSON.stringify(blockedDates)) }, [blockedDates])
@@ -80,6 +83,7 @@ function App() {
   }
   useEffect(() => { fetch('/api/auth/me').then(async response => { if (response.ok) { const result = await response.json(); setCurrentAccount(result.account); setBookings(result.bookings || []) } }) }, [])
   useEffect(() => { fetch('/api/projects').then(response => response.ok ? response.json() : null).then(result => { if (result?.projects?.length) setProjects(result.projects) }).catch(() => {}) }, [])
+  useEffect(() => { fetch('/api/reviews').then(response => response.ok ? response.json() : null).then(result => { if (result?.reviews?.length) setReviews(result.reviews); if (result?.googleMapsUrl) setReviewsUrl(result.googleMapsUrl) }).catch(() => {}) }, [])
   const authenticate = result => { setCurrentAccount(result.account); setBookings(result.bookings || []); setAccessOpen(false) }
   const addCar = async car => { const response = await fetch('/api/vehicles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(car) }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'No pudimos guardar el vehículo.'); setCurrentAccount(account => ({ ...account, cars: [...(account.cars || []), result.vehicle] })) }
   const logout = async () => { await fetch('/api/auth/logout', { method: 'POST' }); setCurrentAccount(null); setBookings([]); setAccessOpen(false) }
@@ -140,7 +144,7 @@ function App() {
 
       <section className="section process" id="proceso"><div className="section-head"><div><span className="kicker">SIMPLE. TRANSPARENTE. EXCEPCIONAL.</span><h2>Tu auto en buenas manos,<br/><em>desde el primer clic.</em></h2></div></div><div className="steps">{[['01','Reserva en línea','Elige el servicio, día y hora que mejor te funcionen.'],['02','Evaluamos tu auto','Revisamos cada detalle y confirmamos el tratamiento ideal.'],['03','Creamos la magia','Nuestros especialistas trabajan con precisión y productos premium.'],['04','Vuelve a estrenar','Recibe tu vehículo impecable y disfruta el resultado.']].map(([n,t,d]) => <div className="step" key={n}><span>{n}</span><div className="step-icon">{n === '01' ? <CalendarDays/> : n === '04' ? <Car/> : <Sparkles/>}</div><h3>{t}</h3><p>{d}</p></div>)}</div></section>
 
-      <section className="testimonial" id="opiniones"><div><div className="quote">“</div><div className="stars">★★★★★</div><blockquote>Mi auto no se veía así ni cuando salió de la agencia. La atención, el cuidado y el resultado superaron completamente mis expectativas.</blockquote><p><strong>CARLOS M.</strong><span>Cliente de detallado · BMW Serie 3</span></p></div></section>
+      <section className="testimonial" id="opiniones"><div className="reviews-wrap"><span className="kicker">OPINIONES</span><h2>Experiencias que generan <em>confianza.</em></h2><div className="reviews-grid">{reviews.map(review => <article className="review-card" key={review.id}><div className="stars" aria-label={`${review.rating} de 5 estrellas`}>{'★'.repeat(Math.round(review.rating || 5))}{'☆'.repeat(5 - Math.round(review.rating || 5))}</div><blockquote>“{review.text}”</blockquote><p><strong>{review.author}</strong><span>{review.relativeTime || 'Opinión de cliente'}</span></p></article>)}</div>{reviewsUrl && <a className="btn review-link" href={reviewsUrl} target="_blank" rel="noreferrer">Ver y escribir opiniones en Google <ArrowRight size={17}/></a>}</div></section>
 
       <section className="section owner-section"><div className="owner-card"><span className="kicker">HECHO EN COSTA RICA</span><h2>Pasión por cada detalle.</h2><p>Soy <strong>Josue Arce</strong>, tengo 29 años y creé este estudio para ofrecer en Costa Rica un cuidado automotriz honesto, preciso y de nivel profesional.</p><span className="owner-signature">Josue Arce · Fundador</span></div></section>
 

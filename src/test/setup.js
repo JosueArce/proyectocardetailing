@@ -10,6 +10,7 @@ const requestBody = options => JSON.parse(options.body || '{}')
 const mockApi = async (url, options = {}) => {
   if (url === '/api/auth/me') return jsonResponse({ error: 'Sin sesión' }, false)
   if (url === '/api/projects') return jsonResponse({ projects: [] })
+  if (url === '/api/reviews') return jsonResponse({ reviews: [], googleMapsUrl: '' })
 
   if (url === '/api/auth/register' || url === '/api/auth/login') {
     const body = requestBody(options)

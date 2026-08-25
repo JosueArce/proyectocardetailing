@@ -38,6 +38,9 @@ const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!'
 const adminPhone = process.env.ADMIN_PHONE || '83629162'
 const sessionSecret = process.env.SESSION_SECRET || 'development-only-change-me'
 const firebaseApiKey = process.env.FIREBASE_WEB_API_KEY || ''
+const googlePlaceId = process.env.GOOGLE_PLACE_ID || ''
+const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY || ''
+let reviewsCache = { expiresAt: 0, payload: null }
 
 // googleapis es una dependencia grande. Se carga solo cuando una petición necesita
 // Calendar para que una instancia de Cloud Run con poca memoria pueda iniciar y
@@ -161,8 +164,73 @@ const uploadProjectMedia = async (item, projectId, index) => {
   return { type, storagePath: objectName, mimeType: match[1], url: `/api/projects/${projectId}/media/${index}` }
 }
 
+const projectMediaType = object => {
+  if (object.contentType?.startsWith('image/')) return 'image'
+  if (object.contentType?.startsWith('video/')) return 'video'
+  if (/\.(?:jpe?g|png|webp)$/i.test(object.name || '')) return 'image'
+  if (/\.(?:mp4|webm|mov)$/i.test(object.name || '')) return 'video'
+  return null
+}
+
+const listProjectMedia = async projectIds => {
+  const bucket = process.env.STORAGE_BUCKET
+  if (!bucket || !projectIds.length) return new Map()
+  const { storage } = await getGoogleServices()
+  const allowed = new Set(projectIds)
+  const grouped = new Map(projectIds.map(id => [id, []]))
+  let pageToken
+  do {
+    const result = await storage.objects.list({ bucket, prefix: 'projects/', maxResults: 1000, pageToken })
+    for (const object of result.data.items || []) {
+      const match = /^projects\/([^/]+)\/(photos|videos)\/(.+)$/.exec(object.name || '')
+      const type = match && projectMediaType(object)
+      if (!match || !type || !allowed.has(match[1])) continue
+      grouped.get(match[1]).push({ type, storagePath: object.name, mimeType: object.contentType || (type === 'video' ? 'video/mp4' : 'image/jpeg') })
+    }
+    pageToken = result.data.nextPageToken
+  } while (pageToken)
+  for (const [projectId, media] of grouped) {
+    media.sort((a, b) => a.storagePath.localeCompare(b.storagePath, 'es', { numeric: true }))
+    grouped.set(projectId, media.map(item => ({ ...item, url: `/api/projects/${encodeURIComponent(projectId)}/media-file?path=${encodeURIComponent(item.storagePath)}` })))
+  }
+  return grouped
+}
+
 app.disable('x-powered-by')
 app.use(express.json({ limit: '30mb' }))
+
+app.get('/api/reviews', async (_request, response) => {
+  if (!googlePlaceId || !googleMapsApiKey) return response.json({ reviews: [], googleMapsUrl: '' })
+  if (reviewsCache.payload && reviewsCache.expiresAt > Date.now()) return response.json(reviewsCache.payload)
+  try {
+    const placesResponse = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(googlePlaceId)}?languageCode=es`, {
+      headers: { 'X-Goog-Api-Key': googleMapsApiKey, 'X-Goog-FieldMask': 'reviews,rating,userRatingCount,googleMapsUri' },
+    })
+    if (!placesResponse.ok) throw new Error(`Places API respondió ${placesResponse.status}`)
+    const place = await placesResponse.json()
+    const payload = {
+      rating: place.rating || 0,
+      total: place.userRatingCount || 0,
+      googleMapsUrl: place.googleMapsUri || '',
+      reviews: (place.reviews || []).map((review, index) => ({ id: review.name || `google-${index}`, author: review.authorAttribution?.displayName || 'Cliente de Google', rating: review.rating || 5, text: review.text?.text || review.originalText?.text || '', relativeTime: review.relativePublishTimeDescription || 'Opinión en Google' })).filter(review => review.text),
+    }
+    reviewsCache = { expiresAt: Date.now() + 60 * 60 * 1000, payload }
+    response.json(payload)
+  } catch (error) {
+    console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudieron consultar las opiniones públicas', detail: error.message }))
+    response.json({ reviews: [], googleMapsUrl: '' })
+  }
+})
+
+app.get('/robots.txt', (request, response) => {
+  const origin = process.env.PUBLIC_SITE_URL || `${request.protocol}://${request.get('host')}`
+  response.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${origin}/sitemap.xml\n`)
+})
+
+app.get('/sitemap.xml', (request, response) => {
+  const origin = process.env.PUBLIC_SITE_URL || `${request.protocol}://${request.get('host')}`
+  response.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${origin}</loc><changefreq>weekly</changefreq><priority>1.0</priority></url></urlset>`)
+})
 
 app.get('/health', (_request, response) => response.type('text').send('ok'))
 
@@ -261,10 +329,36 @@ app.post('/api/vehicles', requireCustomer, async (request, response) => {
 app.get('/api/projects', async (_request, response) => {
   try {
     const projects = (await listCollection('projects')).filter(project => project.published !== false).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
-    return response.json({ projects })
+    let storedMedia = new Map()
+    try {
+      storedMedia = await listProjectMedia(projects.map(project => project.id))
+    } catch (error) {
+      console.error(JSON.stringify({ severity: 'WARNING', message: 'Se usará la metadata guardada porque no se pudo sincronizar el portafolio con Storage', detail: error.response?.data?.error || error.message }))
+    }
+    return response.json({ projects: projects.map(project => ({ ...project, media: storedMedia.get(project.id)?.length ? storedMedia.get(project.id) : project.media || [] })) })
   } catch (error) {
     console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudieron consultar los proyectos', detail: error.response?.data?.error || error.message }))
     return response.status(502).json({ error: 'No pudimos cargar los proyectos en este momento.' })
+  }
+})
+
+app.get('/api/projects/:projectId/media-file', async (request, response) => {
+  try {
+    const project = await getDocument('projects', request.params.projectId)
+    const storagePath = String(request.query.path || '')
+    if (project.published === false || !storagePath.startsWith(`projects/${request.params.projectId}/`) || !/^projects\/[^/]+\/(photos|videos)\/.+/.test(storagePath) || !process.env.STORAGE_BUCKET) return response.status(404).end()
+    const { auth, storage } = await getGoogleServices()
+    const metadata = await storage.objects.get({ bucket: process.env.STORAGE_BUCKET, object: storagePath })
+    const type = projectMediaType(metadata.data)
+    if (!type) return response.status(415).end()
+    const client = await auth.getClient()
+    const result = await client.request({ url: `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(process.env.STORAGE_BUCKET)}/o/${encodeURIComponent(storagePath)}?alt=media`, method: 'GET', responseType: 'stream' })
+    response.setHeader('Content-Type', metadata.data.contentType || (type === 'video' ? 'video/mp4' : 'image/jpeg'))
+    response.setHeader('Cache-Control', 'public, max-age=3600')
+    return result.data.pipe(response)
+  } catch (error) {
+    console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudo entregar el archivo sincronizado del proyecto', projectId: request.params.projectId, detail: error.response?.data?.error || error.message }))
+    return response.status(404).end()
   }
 })
 

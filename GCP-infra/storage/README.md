@@ -144,6 +144,8 @@ projects/{projectId}/
 
 La colección Firestore `projects/{projectId}` conserva el título, descripción, estado de publicación y la metadata de cada archivo. El bucket permanece privado: la página obtiene el contenido mediante `/api/projects/{projectId}/media/{mediaIndex}` sin exponer credenciales ni hacer públicos los comprobantes. El panel administrativo permite seleccionar simultáneamente entre uno y seis archivos JPG, PNG, WEBP, MP4, WEBM o MOV por publicación, con un máximo de 15 MB por archivo y 20 MB por publicación. También permite agregar archivos en varias selecciones y quitarlos antes de publicar. Estos límites mantienen la solicitud dentro del máximo de Cloud Run; para videos extensos se recomienda comprimirlos antes de subirlos. Cloud Storage usa prefijos en lugar de carpetas físicas; `setup.sh` crea marcadores iniciales para que `projects/`, `photos/` y `videos/` sean visibles en la consola.
 
+Si se cargan archivos manualmente desde Cloud Storage, deben ubicarse bajo `projects/{projectId}/photos/` o `projects/{projectId}/videos/`, donde `{projectId}` es exactamente el ID del documento correspondiente en Firestore. El endpoint público lista estos objetos, los ordena por nombre y genera enlaces protegidos a través de Cloud Run. Una carga en otra carpeta no puede asociarse automáticamente porque el bucket no contiene el título ni la descripción del proyecto.
+
 `tmp/` se elimina automáticamente después de siete días y las cargas multipart incompletas después de un día mediante `lifecycle.json`.
 
 ## Seguridad
