@@ -15,6 +15,7 @@ describe('sitio de detallado automotriz', () => {
     expect(screen.getAllByRole('img', { name: 'AutoEstudioCR Detailing' })).toHaveLength(2)
     expect(screen.getByRole('heading', { name: 'Entrega y recomendaciones' })).toBeInTheDocument()
     expect(screen.getByText('PROCESO COMPLETADO')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Instagram de AutoEstudioCR' })).toHaveAttribute('href', 'https://www.instagram.com/autoestudiocr')
   })
 
   it('muestra SINPE, solicita comprobante y mantiene tarjeta en pausa', async () => {
@@ -161,6 +162,24 @@ describe('sitio de detallado automotriz', () => {
     expect(screen.getByText('No hay citas para este mes.')).toBeInTheDocument()
   })
 
+  it('permite crear códigos desde la pestaña Promociones', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Administrar' }))
+    const login = screen.getByRole('dialog')
+    await user.type(within(login).getByLabelText(/correo/i), 'josue.arce.gonzalez@gmail.com')
+    await user.type(within(login).getByLabelText(/contraseña/i), 'Admin123!')
+    await user.click(within(login).getByRole('button', { name: 'Ingresar' }))
+    const admin = screen.getByText('PANEL DE ADMINISTRACIÓN').closest('section')
+    await user.click(within(admin).getByRole('tab', { name: 'Promociones' }))
+    await user.type(within(admin).getByLabelText('Código'), 'rojo10')
+    await user.type(within(admin).getByLabelText('Porcentaje'), '10')
+    await user.type(within(admin).getByLabelText('Descripción'), '10% en el próximo lavado')
+    await user.click(within(admin).getByRole('button', { name: 'Crear código' }))
+    expect(fetch).toHaveBeenCalledWith('/api/admin/promotions', expect.objectContaining({ method: 'POST' }))
+    expect(await within(admin).findByText('ROJO10')).toBeInTheDocument()
+  })
+
   it('permite crear una cuenta opcional y registrar varios vehículos', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -183,6 +202,13 @@ describe('sitio de detallado automotriz', () => {
     await user.click(within(portal).getByRole('button', { name: /agregar vehículo/i }))
     expect(fetch).toHaveBeenCalledWith('/api/vehicles', expect.objectContaining({ method: 'POST' }))
     expect(within(portal).getByText('Toyota RAV4')).toBeInTheDocument()
+    await user.click(within(portal).getByRole('button', { name: 'Cerrar' }))
+    await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
+    const booking = screen.getByRole('dialog')
+    await user.type(within(booking).getByPlaceholderText('AUTOESTUDIO'), 'rojo10')
+    await user.click(within(booking).getByRole('button', { name: 'Redimir' }))
+    expect(await within(booking).findByText(/10% de descuento/i)).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith('/api/promotions/validate', expect.objectContaining({ method: 'POST' }))
   })
 
   it('impide reservar una fecha bloqueada por administración', async () => {

@@ -38,13 +38,18 @@ const mockApi = async (url, options = {}) => {
     return jsonResponse({ bookings: JSON.parse(localStorage.getItem('detail-bookings') || '[]') })
   }
   if (url === '/api/admin/system-status') return jsonResponse({ ok: true })
-  if (url === '/api/admin/operations') return jsonResponse({ blockedDates: [], expenses: [] })
+  if (url === '/api/admin/operations') return jsonResponse({ blockedDates: [], expenses: [], promotions: [] })
   if (url === '/api/admin/blocked-dates') return jsonResponse({ date: requestBody(options).date })
   if (url.startsWith('/api/admin/blocked-dates/')) return jsonResponse({ ok: true })
 
   if (url === '/api/admin/expenses') {
     return jsonResponse({ expense: { ...requestBody(options), id: 'expense-test' } })
   }
+  if (url === '/api/admin/promotions') {
+    const body = requestBody(options)
+    return jsonResponse({ promotion: { ...body, id: 'promotion-test', active: true } })
+  }
+  if (url === '/api/promotions/validate') return jsonResponse({ promotion: { id: 'promotion-test', code: requestBody(options).code, rewardType: 'percentage', value: 10, description: '10% de descuento' } })
   if (url === '/api/admin/projects') {
     const body = requestBody(options)
     return jsonResponse({

@@ -22,6 +22,12 @@ La identidad visual oficial se almacena como un SVG vectorial en `public/autoest
 
 El historial permite abrir cada reserva, consultar estado, trabajo realizado y evidencias. Administración puede aprobar, finalizar o cancelar la cita, documentar el trabajo y agregar URLs de fotografías o videos; por ahora se incluyen imágenes demostrativas y posteriormente se reemplazarán por cargas a Cloud Storage.
 
+## Beneficios y promociones
+
+Los clientes autenticados acumulan una recompensa por cada tres reservaciones completadas. La siguiente reservación de servicios regulares recibe 50% de descuento; el beneficio no aplica si la selección contiene un tratamiento cerámico y cada recompensa se consume una sola vez. El cálculo se realiza nuevamente en el servidor usando el historial de Firestore, por lo que no depende de valores enviados por el navegador.
+
+El panel administrativo incluye la pestaña **Promociones**, donde se pueden crear códigos de porcentaje, monto fijo o regalía. Los códigos se guardan en `promotions`; cada cliente con cuenta puede validarlos al reservar y utilizarlos una vez. Cuando coinciden un código de descuento y el beneficio frecuente se aplica el mayor descuento monetario, sin acumularlos; una regalía validada se respeta y deja disponible el beneficio frecuente para una futura reserva.
+
 Las actualizaciones administrativas guardan primero el estado operativo en Firestore. Una falla al sincronizar la agenda o enviar el correo se presenta como advertencia y no impide aprobar, pagar, finalizar o cancelar la cita. Para finalizar un servicio es obligatorio registrar antes el pago; la interfaz explica este requisito al presionar **Finalizar**.
 
 El prototipo está localizado para Costa Rica: precios, ingresos, gastos y ganancias se presentan en colones costarricenses (CRC). La historia de marca identifica a Josue Arce, de 29 años, como fundador del proyecto.
@@ -81,6 +87,8 @@ El sitio incluye metadatos en español para buscadores y redes sociales, datos e
 5. Publica proyectos reales con títulos y descripciones útiles de forma periódica.
 
 La sección **Opiniones** consulta reseñas públicas de Google Maps mediante Places API (New). Configura `GOOGLE_PLACE_ID` y guarda `GOOGLE_MAPS_API_KEY` como secreto de Cloud Run; restringe esa clave a Places API y al proyecto GCP. La respuesta se conserva en caché durante una hora y, si Google no está configurado o no responde, la web presenta una opinión local de respaldo sin mostrar fallos técnicos. Google determina cuáles y cuántas reseñas devuelve; el botón de la sección permite abrir el perfil, consultar todas y escribir una nueva.
+
+La configuración se automatiza con `./GCP-infra/configure-google-reviews.sh`. La guía paso a paso para obtener el Place ID, crear la API key, guardarla en Secret Manager y validar `/api/reviews` está en [`GCP-infra/README.md`](GCP-infra/README.md#mostrar-reseñas-de-google-business-profile).
 
 Las reseñas deben conservar el autor, texto y calificación originales. Para publicar testimonios recibidos directamente fuera de Google, solicita consentimiento explícito y utiliza un flujo de moderación antes de hacerlos públicos.
 

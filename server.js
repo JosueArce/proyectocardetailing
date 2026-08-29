@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import crypto from 'node:crypto'
 import { sendBookingNotifications, sendBookingUpdateEmail } from './notifications.js'
+import { calculateBookingBenefit } from './benefits.js'
 
 const app = express()
 const port = Number(process.env.PORT || 8080)
@@ -432,8 +433,8 @@ app.get('/api/admin/system-status', requireAdmin, async (_request, response) => 
 
 app.get('/api/admin/operations', requireAdmin, async (_request, response) => {
   try {
-    const [blockedDates, expenses] = await Promise.all([listCollection('blockedDates'), listCollection('expenses')])
-    return response.json({ blockedDates: blockedDates.map(item => item.date), expenses })
+    const [blockedDates, expenses, promotions] = await Promise.all([listCollection('blockedDates'), listCollection('expenses'), listCollection('promotions')])
+    return response.json({ blockedDates: blockedDates.map(item => item.date), expenses, promotions })
   } catch {
     return response.status(502).json({ error: 'No pudimos consultar la configuración operativa.' })
   }
@@ -473,6 +474,39 @@ app.post('/api/admin/expenses', requireAdmin, async (request, response) => {
   }
 })
 
+app.get('/api/admin/promotions', requireAdmin, async (_request, response) => {
+  try { return response.json({ promotions: await listCollection('promotions') }) }
+  catch { return response.status(502).json({ error: 'No pudimos consultar las promociones.' }) }
+})
+
+app.post('/api/admin/promotions', requireAdmin, async (request, response) => {
+  const code = String(request.body?.code || '').trim().toUpperCase().replace(/\s+/g, '')
+  const rewardType = request.body?.rewardType
+  const value = Number(request.body?.value || 0)
+  const description = String(request.body?.description || '').trim()
+  if (!/^[A-Z0-9_-]{3,24}$/.test(code) || !['percentage', 'fixed', 'gift'].includes(rewardType) || !description) return response.status(400).json({ error: 'Completa un código válido, el tipo y la descripción.' })
+  if (rewardType === 'percentage' && (!(value > 0) || value > 100)) return response.status(400).json({ error: 'El porcentaje debe estar entre 1 y 100.' })
+  if (rewardType === 'fixed' && !(value > 0)) return response.status(400).json({ error: 'El descuento debe ser mayor que cero.' })
+  try {
+    const existing = (await listCollection('promotions')).find(promotion => promotion.code === code)
+    if (existing) return response.status(409).json({ error: 'Ese código ya existe.' })
+    const id = crypto.randomUUID()
+    const promotion = await saveDocument('promotions', id, { code, rewardType, value: rewardType === 'gift' ? 0 : value, description, active: true, createdAt: new Date().toISOString() }, true)
+    return response.status(201).json({ promotion })
+  } catch { return response.status(502).json({ error: 'No pudimos crear la promoción.' }) }
+})
+
+app.post('/api/promotions/validate', requireCustomer, async (request, response) => {
+  const code = String(request.body?.code || '').trim().toUpperCase().replace(/\s+/g, '')
+  try {
+    const [promotions, bookings] = await Promise.all([listCollection('promotions'), listCollection('bookings')])
+    const promotion = promotions.find(item => item.code === code && item.active !== false)
+    if (!promotion) return response.status(404).json({ error: 'El código no existe o ya no está disponible.' })
+    if (bookings.some(booking => booking.customerId === request.customerId && booking.promotionId === promotion.id)) return response.status(409).json({ error: 'Ya utilizaste este código anteriormente.' })
+    return response.json({ promotion })
+  } catch { return response.status(502).json({ error: 'No pudimos validar el código en este momento.' }) }
+})
+
 app.post('/api/bookings', async (request, response) => {
   const booking = request.body || {}
   if (requiredFields.some(field => !String(booking[field] || '').trim())) {
@@ -489,8 +523,8 @@ app.post('/api/bookings', async (request, response) => {
   let stage = 'availability'
   let uploadedReceipt = ''
   try {
-    const { names, label, duration, cost } = selection
-    const [existingBookings, blockedDates] = await Promise.all([listCollection('bookings'), listCollection('blockedDates')])
+    const { names, label, duration, cost: baseCost } = selection
+    const [existingBookings, blockedDates, promotions] = await Promise.all([listCollection('bookings'), listCollection('blockedDates'), listCollection('promotions')])
     if (blockedDates.some(item => item.date === booking.date)) return response.status(409).json({ error: 'Esa fecha no está disponible. Elige otro día.' })
     const requestedStart = new Date(`${booking.date}T${booking.time}:00-06:00`)
     const requestedEnd = new Date(requestedStart.getTime() + duration * 60_000)
@@ -503,7 +537,15 @@ app.post('/api/bookings', async (request, response) => {
     })
     if (overlaps) return response.status(409).json({ error: 'Ese horario no tiene tiempo suficiente para todos los servicios seleccionados. Elige otra hora disponible.' })
     const customerId = readCustomerSession(request)
-    const confirmedBooking = { ...booking, services: names, service: label, id: crypto.randomUUID(), customerId, cost, status: 'Pendiente', paymentStatus: 'Pendiente', createdAt: new Date().toISOString() }
+    const requestedCode = String(booking.promotionCode || '').trim().toUpperCase().replace(/\s+/g, '')
+    if (requestedCode && !customerId) return response.status(401).json({ error: 'Inicia sesión para redimir un código promocional.' })
+    const promotion = requestedCode ? promotions.find(item => item.code === requestedCode && item.active !== false) : null
+    if (requestedCode && !promotion) return response.status(400).json({ error: 'El código promocional no es válido.' })
+    if (promotion && existingBookings.some(item => item.customerId === customerId && item.promotionId === promotion.id && item.status !== 'Cancelada')) return response.status(409).json({ error: 'Ya utilizaste este código anteriormente.' })
+    const benefit = calculateBookingBenefit({ baseCost, services: names, customerId, customerEmail: booking.email, bookings: existingBookings, promotion })
+    const cost = benefit.cost
+    const confirmedBooking = { ...booking, services: names, service: label, id: crypto.randomUUID(), customerId, baseCost, cost, discount: benefit.discount, benefitType: benefit.benefitType, benefitLabel: benefit.benefitLabel, promotionId: benefit.promotionId, promotionCode: benefit.promotionCode, status: 'Pendiente', paymentStatus: 'Pendiente', createdAt: new Date().toISOString() }
+    delete confirmedBooking.promotion
     if (booking.paymentMethod === 'sinpe') {
       stage = 'storage'
       uploadedReceipt = await uploadReceipt(booking.paymentEvidenceData, booking.paymentEvidenceName, confirmedBooking.id)
@@ -518,7 +560,7 @@ app.post('/api/bookings', async (request, response) => {
       calendarId,
       requestBody: {
         summary: `${label} · ${booking.vehicle}`,
-        description: [`Cliente: ${booking.name}`, `Teléfono: ${booking.phone}`, `Vehículo: ${booking.vehicle}`, `Servicios: ${names.join(', ')}`, `Costo total: ₡${cost.toLocaleString('es-CR')}`, `Pago: ${booking.paymentMethod === 'sinpe' ? 'SINPE Móvil' : 'Efectivo'} · Pendiente`, booking.notes ? `Notas: ${booking.notes}` : ''].filter(Boolean).join('\n'),
+        description: [`Cliente: ${booking.name}`, `Teléfono: ${booking.phone}`, `Vehículo: ${booking.vehicle}`, `Servicios: ${names.join(', ')}`, `Costo original: ₡${baseCost.toLocaleString('es-CR')}`, benefit.discount ? `Beneficio: ${benefit.benefitLabel} (-₡${benefit.discount.toLocaleString('es-CR')})` : '', `Costo total: ₡${cost.toLocaleString('es-CR')}`, `Pago: ${booking.paymentMethod === 'sinpe' ? 'SINPE Móvil' : 'Efectivo'} · Pendiente`, booking.notes ? `Notas: ${booking.notes}` : ''].filter(Boolean).join('\n'),
         start: { dateTime: start.toISOString(), timeZone },
         end: { dateTime: end.toISOString(), timeZone },
       },

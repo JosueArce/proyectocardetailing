@@ -31,6 +31,7 @@ erDiagram
   BOOKINGS ||--o{ EVIDENCE : contiene
   BOOKINGS ||--o{ PAYMENT_EVENTS : registra
   USERS ||--o{ EXPENSES : registra
+  USERS ||--o{ BOOKINGS : acumula_beneficios
 
   USERS {
     string id
@@ -208,6 +209,8 @@ firebase deploy --config GCP-infra/storage/firebase.json --only firestore:rules,
 ```
 
 Las reservaciones se guardan en `bookings`, perfiles en `users`, autos en `vehicles`, gastos en `expenses`, bloqueos en `blockedDates` y comprobantes SINPE en el bucket privado. Firebase Authentication administra contraseñas; la aplicación nunca las escribe en Firestore ni `localStorage`. Una cookie HttpOnly relaciona la sesión con el UID y el historial usa `customerId`, conservando compatibilidad con reservas antiguas por correo. La disponibilidad se valida nuevamente en el servidor contra citas y bloqueos. En esta primera integración el comprobante viaja codificado en base64 con límite de 5 MB; para archivos grandes conviene usar URLs firmadas.
+
+Las promociones se guardan en `promotions`. Las reservas beneficiadas conservan `baseCost`, `cost`, `discount`, `benefitType`, `benefitLabel`, `promotionId` y `promotionCode`, lo que permite auditar el precio original y evita que un cliente reutilice el mismo código. El beneficio frecuente se calcula a partir de las reservas `Completada` de la cuenta y excluye cualquier selección que contenga tratamientos cerámicos.
 
 ## Activar cuentas persistentes
 

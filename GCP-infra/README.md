@@ -2,7 +2,56 @@
 
 La raíz del proyecto contiene el `Dockerfile` multi-stage que Cloud Run detecta automáticamente. Esta carpeta contiene el pipeline de Cloud Build y los scripts de despliegue. La imagen final ejecuta el servidor Node que integra Calendar y sirve los archivos estáticos compilados.
 
-> **Alcance del prototipo:** las citas se guardan en el `localStorage` del navegador. El despliegue permite probar la experiencia visual, pero las reservas no se comparten entre dispositivos. Para producción se necesita una API, una base de datos y autenticación para el panel.
+> Las reservaciones, perfiles, vehículos y datos operativos se guardan en Firestore; los archivos se almacenan en Cloud Storage y las identidades de clientes se administran con Firebase Authentication.
+
+## Mostrar reseñas de Google Business Profile
+
+La sección **Opiniones** ya consume `GET /api/reviews`. Para mostrar las reseñas reales se necesitan el **Place ID** del negocio y una API key restringida a **Places API (New)**. La clave permanece en Secret Manager y nunca se envía al navegador.
+
+### 1. Obtener el Place ID
+
+Abre [Place ID Finder](https://developers.google.com/maps/documentation/places/web-service/place-id), busca el nombre y ubicación exactos del perfil de AutoEstudioCR y copia el identificador que empieza normalmente con `ChIJ`. El Place ID no es el número del proyecto GCP ni el ID interno de Google Business Profile.
+
+### 2. Crear y restringir la API key
+
+En **Google Cloud Console → APIs & Services**:
+
+1. Habilita **Places API (New)**.
+2. Abre **Credentials → Create credentials → API key**.
+3. En **API restrictions**, selecciona **Restrict key** y permite únicamente **Places API (New)**.
+4. No guardes la clave en GitHub, `.env.example` ni `cloudbuild.yaml`.
+
+### 3. Configurar Cloud Run
+
+Desde Cloud Shell, en la raíz del repositorio:
+
+```bash
+export PROJECT_ID="tu-id-de-proyecto"
+export REGION="us-west1"
+export GOOGLE_PLACE_ID="ChIJ_REEMPLAZAR"
+export GOOGLE_MAPS_API_KEY="AIza_REEMPLAZAR"
+# Opcional, pero recomendado para sitemap y SEO:
+export PUBLIC_SITE_URL="https://tu-dominio.cr"
+
+./GCP-infra/configure-google-reviews.sh
+
+unset GOOGLE_MAPS_API_KEY
+```
+
+El script habilita las APIs necesarias, crea una versión del secreto `autoestudiocr-google-maps-api-key`, concede lectura solo a la cuenta de Cloud Run y despliega una revisión con `GOOGLE_PLACE_ID`. Esta configuración se conserva en despliegues posteriores porque Cloud Build actualiza otras variables sin limpiar secretos.
+
+### 4. Verificar
+
+Abre la URL que imprime el script o ejecuta:
+
+```bash
+SERVICE_URL="$(gcloud run services describe proyectocardetailing \
+  --region=us-west1 --project="$PROJECT_ID" --format='value(status.url)')"
+
+curl -s "$SERVICE_URL/api/reviews"
+```
+
+La respuesta debe contener `reviews`, `rating`, `total` y `googleMapsUrl`. Después abre el sitio en una ventana privada o haz una recarga completa. El servidor conserva la respuesta de Google durante una hora; una reseña nueva puede tardar en ser seleccionada por Places API y Google puede devolver solo una cantidad limitada de opiniones.
 
 ## Opción 1: desplegar desde la terminal
 
