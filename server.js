@@ -301,6 +301,22 @@ app.post('/api/auth/login', async (request, response) => {
   }
 })
 
+app.post('/api/auth/password-reset', async (request, response) => {
+  const email = String(request.body?.email || '').trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response.status(400).json({ error: 'Ingresa un correo electrónico válido.' })
+  try {
+    await firebaseAuth('sendOobCode', { requestType: 'PASSWORD_RESET', email })
+  } catch (error) {
+    // Firebase puede ocultar o reportar cuentas inexistentes según la protección
+    // contra enumeración configurada. En ambos casos se devuelve el mismo mensaje.
+    if (!error.message.includes('EMAIL_NOT_FOUND')) {
+      console.error(JSON.stringify({ severity: 'ERROR', message: 'No se pudo solicitar la recuperación de contraseña', detail: error.message }))
+      return response.status(502).json({ error: 'No pudimos enviar el correo en este momento. Intenta nuevamente.' })
+    }
+  }
+  return response.json({ message: 'Si existe una cuenta con ese correo, recibirás un enlace para crear una nueva contraseña.' })
+})
+
 app.post('/api/auth/logout', (_request, response) => {
   response.setHeader('Set-Cookie', 'customer_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0')
   return response.json({ ok: true })

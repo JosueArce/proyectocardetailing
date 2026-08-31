@@ -15,7 +15,16 @@ describe('sitio de detallado automotriz', () => {
     expect(screen.getAllByRole('img', { name: 'AutoEstudioCR Detailing' })).toHaveLength(2)
     expect(screen.getByRole('heading', { name: 'Entrega y recomendaciones' })).toBeInTheDocument()
     expect(screen.getByText('PROCESO COMPLETADO')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Próximamente.' })).toBeInTheDocument()
+    expect(screen.queryByText(/la atención fue excelente/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: "MEGUIAR'S" })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'CARPRO' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'KOCH-CHEMIE' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'VONIXX' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Instagram de AutoEstudioCR' })).toHaveAttribute('href', 'https://www.instagram.com/autoestudiocr')
+    expect(screen.getByRole('link', { name: /consultar por whatsapp/i })).toHaveAttribute('href', expect.stringContaining('https://wa.me/50683629162?text='))
+    expect(screen.getByRole('link', { name: 'Contactar a AutoEstudioCR por WhatsApp' })).toHaveAttribute('href', expect.stringContaining('https://wa.me/50683629162?text='))
+    expect(screen.getByText('Reservar por WhatsApp')).toBeInTheDocument()
   })
 
   it('muestra SINPE, solicita comprobante y mantiene tarjeta en pausa', async () => {
@@ -34,7 +43,7 @@ describe('sitio de detallado automotriz', () => {
   })
 
   it('presenta errores de comprobante en lenguaje útil para el cliente', async () => {
-    fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Sin sesión' }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ projects: [] }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ reviews: [] }) }).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.' }) })
+    fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Sin sesión' }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ projects: [] }) }).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.' }) })
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
@@ -209,6 +218,21 @@ describe('sitio de detallado automotriz', () => {
     await user.click(within(booking).getByRole('button', { name: 'Redimir' }))
     expect(await within(booking).findByText(/10% de descuento/i)).toBeInTheDocument()
     expect(fetch).toHaveBeenCalledWith('/api/promotions/validate', expect.objectContaining({ method: 'POST' }))
+  })
+
+  it('permite solicitar un enlace para recuperar la contraseña', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Mi cuenta' }))
+    const access = screen.getByRole('dialog')
+    await user.click(within(access).getByRole('button', { name: '¿Olvidaste tu contraseña?' }))
+    expect(within(access).getByRole('heading', { name: 'Recupera tu contraseña' })).toBeInTheDocument()
+    await user.type(within(access).getByLabelText('Correo'), 'cliente@example.com')
+    await user.click(within(access).getByRole('button', { name: 'Enviar enlace' }))
+    expect(fetch).toHaveBeenCalledWith('/api/auth/password-reset', expect.objectContaining({ method: 'POST', body: JSON.stringify({ email: 'cliente@example.com' }) }))
+    expect(await within(access).findByRole('status')).toHaveTextContent('Si existe una cuenta con ese correo')
+    await user.click(within(access).getByRole('button', { name: /volver a iniciar sesión/i }))
+    expect(within(access).getByRole('heading', { name: 'Bienvenido de nuevo' })).toBeInTheDocument()
   })
 
   it('impide reservar una fecha bloqueada por administración', async () => {

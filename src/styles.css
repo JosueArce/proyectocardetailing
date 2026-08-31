@@ -90,3 +90,17 @@
 @media(min-width:700px){.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.addons-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.services-cta{grid-template-columns:1fr auto;align-items:center}}
 @media(min-width:1100px){.catalog-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.catalog-section .catalog-card:nth-child(4){grid-column:auto}.catalog-section .catalog-card:last-child{grid-column:2}.addons-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:520px){.catalog-actions{grid-template-columns:1fr}.services-cta>div{display:grid}.services-cta .outline-btn{width:100%}}
+
+/* Acceso persistente y accesible para consultas y reservas por WhatsApp. */
+.whatsapp-float{position:fixed;right:clamp(16px,3vw,34px);bottom:clamp(16px,3vw,30px);z-index:40;display:flex;align-items:center;gap:11px;min-height:56px;padding:10px 16px 10px 13px;border:1px solid #fff;background:#e30613;color:#fff;text-decoration:none;box-shadow:0 12px 32px #0008;transition:transform .2s,background .2s}.whatsapp-float:hover,.whatsapp-float:focus-visible{background:#050505;transform:translateY(-3px);outline:2px solid #e30613;outline-offset:3px}.whatsapp-float>svg{width:27px;height:27px;flex:0 0 auto}.whatsapp-float>span{display:grid;line-height:1.15}.whatsapp-float strong{font-size:13px}.whatsapp-float small{margin-top:4px;color:#fff;font-size:9px}.services-cta .outline-btn{background:transparent;color:#fff}.services-cta .outline-btn:hover,.services-cta .outline-btn:focus-visible{border-color:#e30613;background:#e30613;color:#fff}.services-cta .outline-btn svg{width:17px;margin-right:8px}.product-grid-single{grid-template-columns:minmax(260px,440px);justify-content:center}.product-grid-single article{width:100%}
+@media(max-width:520px){.whatsapp-float{right:12px;bottom:12px;min-height:50px;padding:9px 12px}.whatsapp-float>svg{width:24px}.whatsapp-float strong{font-size:12px}.whatsapp-float small{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.whatsapp-float{transition:none}}
+
+/* Numeración del proceso alineada con la identidad roja de AutoEstudioCR. */
+.process .step>span{background:#e30613;color:#fff;border:1px solid #e30613}.process .step:not(.step-final){border-top-color:#e30613}.process .step:not(.step-final):hover{box-shadow:inset 0 -3px 0 #e30613}
+
+/* Estado temporal de opiniones, sin testimonios de demostración. */
+.testimonial-coming-soon{min-height:390px;background:#fff}.testimonial-coming-soon>div{width:min(760px,100%);padding:55px 28px;border:1px solid #050505;box-shadow:8px 8px 0 #e30613}.testimonial-coming-soon h2{margin:12px 0;color:#050505;font:600 clamp(42px,7vw,78px)/1 Manrope,sans-serif;text-transform:uppercase}.testimonial-coming-soon p{max-width:560px;margin:20px auto 0;color:#050505a6;font-size:13px;line-height:1.7}
+
+/* Recuperación de contraseña dentro del acceso de clientes. */
+.forgot-password,.back-to-login{width:max-content;border:0;background:transparent;color:#e30613;padding:2px 0;font-size:10px;font-weight:800}.forgot-password{justify-self:end}.back-to-login{justify-self:center;margin-top:3px}.forgot-password:hover,.back-to-login:hover{text-decoration:underline}.access-modal .form-notice{text-align:center}

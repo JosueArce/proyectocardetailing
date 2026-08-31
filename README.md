@@ -10,6 +10,8 @@ La página presenta, en este orden, Lavado Básico, Detallado Básico, Detallado
 
 El cliente puede combinar servicios seleccionándolos dentro del modal de reservación o agregándolos a su selección mientras navega por el catálogo. La selección se conserva localmente hasta completar la solicitud y el servidor valida cada nombre usando el mismo `services.json`.
 
+Un acceso flotante **Contáctenos** permanece visible durante la navegación y abre WhatsApp al número oficial con un mensaje inicial de consulta. La llamada a la acción del catálogo y el icono del pie utilizan el mismo enlace.
+
 La sección **Resultados que hablan** consulta proyectos publicados en Firestore. Desde administración se puede agregar el nombre, la descripción del trabajo y hasta seis fotografías o videos; Cloud Run guarda los archivos bajo `projects/{projectId}/photos/` y `projects/{projectId}/videos/` en el bucket privado y entrega el contenido mediante la API pública del portafolio.
 
 También se reconocen archivos agregados directamente desde la consola de Cloud Storage. Para que se relacionen con un proyecto existente deben conservar exactamente su ID de Firestore y esta estructura: `projects/{projectId}/photos/archivo.jpg` o `projects/{projectId}/videos/archivo.mp4`. La API reconstruye la galería desde el contenido real del bucket cada vez que se carga la lista de proyectos; subir el archivo fuera de esos prefijos no modifica la descripción ni crea un proyecto nuevo.
@@ -49,6 +51,8 @@ El despliegue continuo de `main` se crea con `GCP-infra/create-trigger.sh`: cada
 ### Acceso administrativo
 
 La cuenta administrativa inicial usa el correo `josue.arce.gonzalez@gmail.com`, la contraseña `Admin123!` y el teléfono `83629162`. En producción, cambia inmediatamente la contraseña mediante Secret Manager. Las cuentas de cliente utilizan Firebase Authentication y una cookie HttpOnly; Firestore conserva perfiles, vehículos, citas, gastos y fechas bloqueadas.
+
+El acceso de clientes incluye **¿Olvidaste tu contraseña?**. El servidor solicita a Firebase Authentication un correo de restablecimiento sin revelar si la dirección está registrada. Antes de producción, personaliza y verifica la plantilla **Password reset** en Firebase Console → Authentication → Templates y configura el dominio autorizado al que regresará el cliente.
 
 El número público de SINPE Móvil es `+506 8362-9162`. Desde el panel administrativo se pueden seleccionar simultáneamente hasta seis fotos o videos (JPG, PNG, WEBP, MP4, WEBM o MOV) para cada proyecto; también se pueden agregar en varias selecciones antes de publicarlo.
 
