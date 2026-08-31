@@ -30,7 +30,7 @@ ENV NODE_ENV=production
 ENV NODE_OPTIONS=--max-old-space-size=384
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
-COPY package.json server.js notifications.js ./
+COPY package.json server.js notifications.js benefits.js services.json ./
 
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=5 \

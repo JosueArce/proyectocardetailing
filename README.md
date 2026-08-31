@@ -1,18 +1,14 @@
 # AutoEstudioCR Detailing
 
-Aplicación web responsiva para **AutoEstudioCR Detailing**, un negocio costarricense de detallado automotriz. Incluye el catálogo oficial de servicios, precios, productos profesionales, reservación sin registro, cuentas de cliente con vehículos e historial, y un panel administrativo para citas, fechas bloqueadas, ingresos y gastos.
+Aplicación web responsiva para **AutoEstudioCR Detailing**, un negocio costarricense de detallado automotriz. Incluye el catálogo oficial de servicios, productos profesionales, reservación sin registro, cuentas de cliente con vehículos e historial, y un panel administrativo para citas, fechas bloqueadas, ingresos y gastos.
 
 ## Catálogo oficial
 
-El catálogo se organiza en tres grupos y utiliza colones costarricenses (CRC):
+`services.json` es la única fuente de verdad del catálogo público. Contiene los nombres, categorías, descripciones, inclusiones, iconos, recomendaciones y textos de llamada a la acción. Ni React ni el servidor mantienen copias manuales de los servicios.
 
-* **Servicios oficiales:** detallado interior (₡5.000) y detallado exterior (₡6.000).
-* **Tratamientos:** protección cerámica en carrocería (₡50.000), aros (₡10.000) y tapizados (₡20.000).
-* **Servicios adicionales:** limpieza profunda de tapizados (₡5.000), pulido de vidrios y cerámico (₡10.000), restauración de focos (₡6.500), pulido de carrocería (₡20.000), descontaminación exterior (₡15.000) y abrillantado de carrocería (₡20.000).
+La página presenta, en este orden, Lavado Básico, Detallado Básico, Detallado Premium, Cerámico Gold · 1 Año y Cerámico Gold · 3 Años. **Servicios Adicionales** se presenta como una sección independiente. El catálogo no publica precios; las reservas se reciben para valoración y confirmación.
 
-Los precios están sujetos a cambios según la condición y características del vehículo. Los futuros paquetes o combos combinarán estos servicios individuales y se agregarán como una etapa posterior.
-
-El cliente puede combinar servicios de dos maneras: seleccionándolos directamente dentro del modal de reservación o agregándolos al carrito mientras navega por el catálogo. La selección se conserva localmente hasta completar la cita, y el servidor vuelve a calcular el costo y la duración total usando únicamente el catálogo autorizado.
+El cliente puede combinar servicios seleccionándolos dentro del modal de reservación o agregándolos a su selección mientras navega por el catálogo. La selección se conserva localmente hasta completar la solicitud y el servidor valida cada nombre usando el mismo `services.json`.
 
 La sección **Resultados que hablan** consulta proyectos publicados en Firestore. Desde administración se puede agregar el nombre, la descripción del trabajo y hasta seis fotografías o videos; Cloud Run guarda los archivos bajo `projects/{projectId}/photos/` y `projects/{projectId}/videos/` en el bucket privado y entrega el contenido mediante la API pública del portafolio.
 

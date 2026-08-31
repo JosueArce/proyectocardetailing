@@ -1,13 +1,10 @@
-export const containsCeramicTreatment = services => services.some(service => /cer[aá]mic/i.test(service))
-export const isRegularWashSelection = services => services.length > 0 && services.every(service => ['Detallado interior', 'Detallado exterior'].includes(service))
-
-export const calculateBookingBenefit = ({ baseCost, services, customerId, customerEmail = '', bookings = [], promotion = null }) => {
+export const calculateBookingBenefit = ({ baseCost, loyaltyEligible = false, customerId, customerEmail = '', bookings = [], promotion = null }) => {
   if (!customerId) return { cost: baseCost, discount: 0, benefitType: '', benefitLabel: '' }
 
   const customerBookings = bookings.filter(booking => booking.customerId === customerId || (!booking.customerId && customerEmail && booking.email?.toLowerCase() === customerEmail.toLowerCase()))
   const completed = customerBookings.filter(booking => booking.status === 'Completada').length
   const loyaltyUsed = customerBookings.filter(booking => booking.benefitType === 'loyalty' && booking.status !== 'Cancelada').length
-  const loyaltyAvailable = Math.floor(completed / 3) > loyaltyUsed && isRegularWashSelection(services)
+  const loyaltyAvailable = Math.floor(completed / 3) > loyaltyUsed && loyaltyEligible
   const loyaltyDiscount = loyaltyAvailable ? Math.round(baseCost * 0.5) : 0
 
   let promotionDiscount = 0

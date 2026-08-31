@@ -2,6 +2,7 @@ import express from 'express'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import crypto from 'node:crypto'
+import fs from 'node:fs'
 import { sendBookingNotifications, sendBookingUpdateEmail } from './notifications.js'
 import { calculateBookingBenefit } from './benefits.js'
 
@@ -9,29 +10,30 @@ const app = express()
 const port = Number(process.env.PORT || 8080)
 const calendarId = process.env.GOOGLE_CALENDAR_ID || 'josue.arce.gonzalez@gmail.com'
 const timeZone = 'America/Costa_Rica'
-const serviceCatalog = {
-  'Detallado interior': { duration: 120, cost: 5000 },
-  'Detallado exterior': { duration: 120, cost: 6000 },
-  'Protección cerámica en carrocería': { duration: 360, cost: 50000 },
-  'Protección cerámica en aros': { duration: 90, cost: 10000 },
-  'Protección cerámica en tapizados': { duration: 120, cost: 20000 },
-  'Limpieza profunda de tapizados': { duration: 120, cost: 5000 },
-  'Pulido de vidrios y cerámico': { duration: 120, cost: 10000 },
-  'Restauración de focos': { duration: 90, cost: 6500 },
-  'Pulido de carrocería': { duration: 240, cost: 20000 },
-  'Descontaminación exterior': { duration: 180, cost: 15000 },
-  'Abrillantado de carrocería': { duration: 180, cost: 20000 },
+const servicesCatalog = JSON.parse(fs.readFileSync(new URL('./services.json', import.meta.url), 'utf8'))
+const catalogServices = [
+  ...servicesCatalog.services,
+  ...servicesCatalog.additionalServices.items.map(service => ({ ...service, category: servicesCatalog.additionalServices.title })),
+]
+const defaultBookingDurationMinutes = 120
+const durationMinutes = service => {
+  const values = String(service.duration || '').match(/\d+(?:\.\d+)?/g)?.map(Number) || []
+  if (/hora/i.test(service.duration || '') && values.length) return Math.max(...values) * 60
+  if (/minuto/i.test(service.duration || '') && values.length) return Math.max(...values)
+  return defaultBookingDurationMinutes
 }
 const requiredFields = ['name', 'phone', 'email', 'vehicle', 'date', 'time']
 const resolveServices = booking => {
   const requested = Array.isArray(booking.services) ? booking.services : [booking.service]
   const names = [...new Set(requested.map(value => String(value || '').trim()).filter(Boolean))]
-  if (!names.length || names.some(name => !serviceCatalog[name])) return null
+  const selected = names.map(name => catalogServices.find(service => service.name === name || service.id === name))
+  if (!names.length || selected.some(service => !service)) return null
   return {
-    names,
-    label: names.join(' + '),
-    cost: names.reduce((total, name) => total + serviceCatalog[name].cost, 0),
-    duration: names.reduce((total, name) => total + serviceCatalog[name].duration, 0),
+    names: selected.map(service => service.name),
+    label: selected.map(service => service.name).join(' + '),
+    cost: 0,
+    duration: selected.reduce((total, service) => total + durationMinutes(service), 0),
+    loyaltyEligible: false,
   }
 }
 const adminEmail = process.env.ADMIN_EMAIL || 'josue.arce.gonzalez@gmail.com'
@@ -523,7 +525,7 @@ app.post('/api/bookings', async (request, response) => {
   let stage = 'availability'
   let uploadedReceipt = ''
   try {
-    const { names, label, duration, cost: baseCost } = selection
+    const { names, label, duration, cost: baseCost, loyaltyEligible } = selection
     const [existingBookings, blockedDates, promotions] = await Promise.all([listCollection('bookings'), listCollection('blockedDates'), listCollection('promotions')])
     if (blockedDates.some(item => item.date === booking.date)) return response.status(409).json({ error: 'Esa fecha no está disponible. Elige otro día.' })
     const requestedStart = new Date(`${booking.date}T${booking.time}:00-06:00`)
@@ -542,7 +544,7 @@ app.post('/api/bookings', async (request, response) => {
     const promotion = requestedCode ? promotions.find(item => item.code === requestedCode && item.active !== false) : null
     if (requestedCode && !promotion) return response.status(400).json({ error: 'El código promocional no es válido.' })
     if (promotion && existingBookings.some(item => item.customerId === customerId && item.promotionId === promotion.id && item.status !== 'Cancelada')) return response.status(409).json({ error: 'Ya utilizaste este código anteriormente.' })
-    const benefit = calculateBookingBenefit({ baseCost, services: names, customerId, customerEmail: booking.email, bookings: existingBookings, promotion })
+    const benefit = calculateBookingBenefit({ baseCost, loyaltyEligible, customerId, customerEmail: booking.email, bookings: existingBookings, promotion })
     const cost = benefit.cost
     const confirmedBooking = { ...booking, services: names, service: label, id: crypto.randomUUID(), customerId, baseCost, cost, discount: benefit.discount, benefitType: benefit.benefitType, benefitLabel: benefit.benefitLabel, promotionId: benefit.promotionId, promotionCode: benefit.promotionCode, status: 'Pendiente', paymentStatus: 'Pendiente', createdAt: new Date().toISOString() }
     delete confirmedBooking.promotion
@@ -560,7 +562,7 @@ app.post('/api/bookings', async (request, response) => {
       calendarId,
       requestBody: {
         summary: `${label} · ${booking.vehicle}`,
-        description: [`Cliente: ${booking.name}`, `Teléfono: ${booking.phone}`, `Vehículo: ${booking.vehicle}`, `Servicios: ${names.join(', ')}`, `Costo original: ₡${baseCost.toLocaleString('es-CR')}`, benefit.discount ? `Beneficio: ${benefit.benefitLabel} (-₡${benefit.discount.toLocaleString('es-CR')})` : '', `Costo total: ₡${cost.toLocaleString('es-CR')}`, `Pago: ${booking.paymentMethod === 'sinpe' ? 'SINPE Móvil' : 'Efectivo'} · Pendiente`, booking.notes ? `Notas: ${booking.notes}` : ''].filter(Boolean).join('\n'),
+        description: [`Cliente: ${booking.name}`, `Teléfono: ${booking.phone}`, `Vehículo: ${booking.vehicle}`, `Servicios: ${names.join(', ')}`, benefit.benefitLabel ? `Beneficio: ${benefit.benefitLabel}` : '', `Pago: ${booking.paymentMethod === 'sinpe' ? 'SINPE Móvil' : 'Efectivo'} · Pendiente`, booking.notes ? `Notas: ${booking.notes}` : ''].filter(Boolean).join('\n'),
         start: { dateTime: start.toISOString(), timeZone },
         end: { dateTime: end.toISOString(), timeZone },
       },
