@@ -118,7 +118,7 @@ function App() {
           <h1>No solo lo lavamos.<br/><em>Lo restauramos.</em></h1>
           <p>Un servicio de cuidado excepcional que devuelve a tu vehículo el brillo, la presencia y la protección que merece.</p>
           <div className="hero-actions"><button className="btn" onClick={() => openBooking()}>Reservar mi cita <ArrowRight size={18}/></button><a className="text-link" href="#galeria">Ver resultados <ChevronRight size={17}/></a></div>
-          <div className="trust-row"><div><strong>4.9</strong><span className="stars">★★★★★</span><small>+180 clientes felices</small></div><i/><div><strong>100%</strong><small>Productos profesionales</small></div><i/><div><strong>12m</strong><small>Protección disponible</small></div></div>
+          <div className="trust-row"><div><strong>100%</strong><small>Productos profesionales</small></div><i/><div><strong>3 años</strong><small>Protección cerámica disponible</small></div></div>
         </div>
         <div className="scroll-cue">DESCUBRE <span/></div>
       </section>

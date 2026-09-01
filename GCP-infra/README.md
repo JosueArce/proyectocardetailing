@@ -6,7 +6,7 @@ La raíz del proyecto contiene el `Dockerfile` multi-stage que Cloud Run detecta
 
 ## Mostrar reseñas de Google Business Profile
 
-La sección **Opiniones** ya consume `GET /api/reviews`. Para mostrar las reseñas reales se necesitan el **Place ID** del negocio y una API key restringida a **Places API (New)**. La clave permanece en Secret Manager y nunca se envía al navegador.
+El backend ya expone `GET /api/reviews`, pero la interfaz mantiene **Opiniones · Próximamente** hasta completar y validar la integración. Para mostrar reseñas reales se necesitan el **Place ID** del negocio y una API key restringida a **Places API (New)**. La clave permanece en Secret Manager y nunca se envía al navegador.
 
 ### 1. Obtener el Place ID
 
@@ -51,7 +51,17 @@ SERVICE_URL="$(gcloud run services describe proyectocardetailing \
 curl -s "$SERVICE_URL/api/reviews"
 ```
 
-La respuesta debe contener `reviews`, `rating`, `total` y `googleMapsUrl`. Después abre el sitio en una ventana privada o haz una recarga completa. El servidor conserva la respuesta de Google durante una hora; una reseña nueva puede tardar en ser seleccionada por Places API y Google puede devolver solo una cantidad limitada de opiniones.
+La respuesta debe contener `reviews`, `rating`, `total` y `googleMapsUrl`. El servidor conserva la respuesta de Google durante una hora; una reseña nueva puede tardar en ser seleccionada por Places API y Google puede devolver solo una cantidad limitada de opiniones.
+
+### 5. Plan para activar la interfaz
+
+1. Verificar que el perfil de Google Business Profile sea el definitivo y que el `GOOGLE_PLACE_ID` corresponda exactamente a AutoEstudioCR.
+2. Ejecutar `configure-google-reviews.sh` en el ambiente de pruebas y confirmar que `/api/reviews` devuelve calificación, cantidad, reseñas y URL de Google Maps sin errores.
+3. Añadir estados de interfaz `loading`, `ready`, `empty` y `error`. Mientras no haya datos válidos, la página debe conservar **Próximamente** y no inventar calificaciones ni cantidades.
+4. Cuando `rating > 0` y `total > 0`, alimentar desde la API el resumen del hero; nunca volver a escribir valores como `4.9` o `+180` directamente en React.
+5. Reemplazar **Próximamente** por tarjetas de opiniones que conserven autor, texto y calificación entregados por Google, junto con un enlace visible al perfil completo.
+6. Agregar pruebas para respuesta válida, ausencia de configuración, error de Google y caché. Luego ejecutar lint, pruebas y build antes del despliegue.
+7. Desplegar primero a staging, comparar la información con Google Maps y revisar Cloud Logging, uso de Places API y facturación antes de habilitar producción.
 
 ## Opción 1: desplegar desde la terminal
 

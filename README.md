@@ -86,7 +86,7 @@ El sitio incluye metadatos en español para buscadores y redes sociales, datos e
 4. Completa Google Business Profile con dirección o zona de servicio, horario, teléfono, fotografías y el enlace de reserva.
 5. Publica proyectos reales con títulos y descripciones útiles de forma periódica.
 
-La sección **Opiniones** consulta reseñas públicas de Google Maps mediante Places API (New). Configura `GOOGLE_PLACE_ID` y guarda `GOOGLE_MAPS_API_KEY` como secreto de Cloud Run; restringe esa clave a Places API y al proyecto GCP. La respuesta se conserva en caché durante una hora y, si Google no está configurado o no responde, la web presenta una opinión local de respaldo sin mostrar fallos técnicos. Google determina cuáles y cuántas reseñas devuelve; el botón de la sección permite abrir el perfil, consultar todas y escribir una nueva.
+La sección **Opiniones** permanece como **Próximamente** hasta validar la integración. El backend ya puede consultar reseñas públicas de Google Maps mediante Places API (New): configura `GOOGLE_PLACE_ID` y guarda `GOOGLE_MAPS_API_KEY` como secreto de Cloud Run, restringido a Places API y al proyecto GCP. La respuesta se conserva en caché durante una hora. Cuando se active la interfaz, las calificaciones, cantidades y reseñas deberán proceder exclusivamente de Google; no se mostrarán valores de demostración.
 
 La configuración se automatiza con `./GCP-infra/configure-google-reviews.sh`. La guía paso a paso para obtener el Place ID, crear la API key, guardarla en Secret Manager y validar `/api/reviews` está en [`GCP-infra/README.md`](GCP-infra/README.md#mostrar-reseñas-de-google-business-profile).
 
