@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 240" role="img" aria-labelledby="title description">
+  <title id="title">AutoEstudioCR Detailing</title>
+  <desc id="description">Logotipo de AutoEstudioCR con silueta deportiva en blanco y rojo.</desc>
+  <rect width="600" height="240" fill="#050505"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M54 103c34-27 73-39 127-40l47-33c18-13 41-19 68-19h86c32 0 58 9 84 29l38 30 43 12" stroke="#fff" stroke-width="10"/>
+    <path d="M77 102c42-18 85-23 146-21 70 2 130 1 181-9 47-9 88-8 137 8" stroke="#fff" stroke-width="8"/>
+    <path d="M132 89c24 1 42 9 58 27 38 5 83 4 124-3M406 73c41-13 81-10 128 8" stroke="#e30613" stroke-width="8"/>
+    <path d="M230 62h184M334 29l-15 34" stroke="#fff" stroke-width="6"/>
+    <path d="m488 16 5 14 14 5-14 5-5 14-5-14-14-5 14-5 5-14Zm45 20 3 10 10 3-10 3-3 10-3-10-10-3 10-3 3-10Z" fill="#fff" stroke="#fff" stroke-width="2"/>
+    <path d="m540 82 31-15v31Z" fill="#e30613" stroke="#e30613" stroke-width="3"/>
+  </g>
+  <text x="49" y="169" fill="#fff" font-family="Arial Black, Impact, sans-serif" font-size="67" font-style="italic" font-weight="900" letter-spacing="-4">AutoEstudio</text>
+  <text x="463" y="169" fill="#e30613" font-family="Arial Black, Impact, sans-serif" font-size="67" font-style="italic" font-weight="900" letter-spacing="-3">CR</text>
+  <path d="M57 204h104M440 204h103" stroke="#e30613" stroke-width="6" stroke-linecap="round"/>
+  <text x="190" y="216" fill="#fff" font-family="Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="14">DETAILING</text>
+</svg>
