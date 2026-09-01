@@ -1,0 +1,126 @@
+{
+  "services": [
+    {
+      "id": "lavado-basico",
+      "slug": "lavado-basico",
+      "name": "Lavado Básico",
+      "category": "Cuidado Esencial",
+      "shortDescription": "Mantenimiento rápido, limpio y bien terminado.",
+      "featured": false,
+      "showPrice": false,
+      "includedServices": [
+        { "id": "prelavado-espuma", "name": "Prelavado con baño de espuma", "icon": "car-wash-foam" },
+        { "id": "lavado-principal", "name": "Lavado principal con espuma", "icon": "car-wash" },
+        { "id": "limpieza-aros-llantas", "name": "Limpieza de aros y llantas", "icon": "wheel" },
+        { "id": "limpieza-general-interiores", "name": "Limpieza general de interiores", "icon": "car-seat" },
+        { "id": "aspirado-interiores", "name": "Aspirado de interiores", "icon": "vacuum" },
+        { "id": "limpieza-vidrios", "name": "Limpieza de vidrios internos y externos", "icon": "car-window" },
+        { "id": "abrillantado-llantas", "name": "Abrillantado de llantas", "icon": "tire-shine" }
+      ],
+      "recommendedFor": "Ideal para mantenimiento semanal o quincenal."
+    },
+    {
+      "id": "detallado-basico",
+      "slug": "detallado-basico",
+      "name": "Detallado Básico",
+      "category": "Limpieza + Protección",
+      "shortDescription": "Más profundidad y protección en zonas que normalmente se pasan por alto.",
+      "featured": true,
+      "showPrice": false,
+      "includesPreviousPackage": "lavado-basico",
+      "includedServices": [
+        { "id": "incluye-lavado-basico", "name": "Todo lo incluido en Lavado Básico", "icon": "car-wash-foam" },
+        { "id": "restauracion-plasticos", "name": "Hidratación y restauración de plásticos internos y externos", "icon": "interior-trim" },
+        { "id": "limpieza-motor", "name": "Limpieza superficial de motor con desengrasante y acabado", "icon": "engine" },
+        { "id": "limpieza-guardabarros", "name": "Limpieza de guardabarros", "icon": "wheel-arch" },
+        { "id": "hidratacion-cueros", "name": "Hidratación de cueros / asientos", "icon": "car-seat" }
+      ],
+      "recommendedFor": "Ideal para recuperar apariencia y protección interior/exterior."
+    },
+    {
+      "id": "detallado-premium",
+      "slug": "detallado-premium",
+      "name": "Detallado Premium",
+      "category": "Restauración Profunda",
+      "shortDescription": "Una limpieza profunda de interior y exterior con descontaminación de carrocería.",
+      "featured": true,
+      "showPrice": false,
+      "includesPreviousPackage": "detallado-basico",
+      "includedServices": [
+        { "id": "incluye-detallado-basico", "name": "Todo lo incluido en Detallado Básico", "icon": "checklist" },
+        { "id": "limpieza-profunda-interiores", "name": "Limpieza detallada y profunda de interiores", "icon": "car-seat" },
+        { "id": "limpieza-profunda-exteriores", "name": "Limpieza detallada y profunda de exteriores", "icon": "car" },
+        { "id": "descontaminacion-carroceria", "name": "Descontaminación química y mecánica de carrocería", "icon": "decontamination" },
+        { "id": "pulido-vidrios", "name": "Pulido de vidrios", "icon": "windshield" },
+        { "id": "sellador-hidrofobico", "name": "Sellador hidrofóbico en vidrios por hasta 5 meses", "icon": "water-shield" }
+      ],
+      "recommendedFor": "Pulido de carrocería y restauración de focos disponibles como adicionales."
+    },
+    {
+      "id": "ceramico-gold-1-ano",
+      "slug": "ceramico-gold-1-ano",
+      "name": "Cerámico Gold · 1 Año",
+      "category": "Protección Cerámica",
+      "shortDescription": "Brillo profundo y una capa cerámica para facilitar el mantenimiento diario.",
+      "featured": true,
+      "showPrice": false,
+      "includesPreviousPackage": "detallado-premium",
+      "includedServices": [
+        { "id": "incluye-detallado-premium", "name": "Todo lo incluido en Detallado Premium", "icon": "shield" },
+        { "id": "preparacion-pintura", "name": "Preparación y descontaminación de la pintura", "icon": "polisher" },
+        { "id": "ceramico-1-ano", "name": "Aplicación de recubrimiento cerámico de hasta 1 año", "icon": "ceramic-coating" },
+        { "id": "repelencia-agua", "name": "Mayor repelencia al agua y facilidad de lavado", "icon": "water-repellent" },
+        { "id": "restauracion-basica-focos", "name": "Restauración básica de focos incluida", "icon": "headlight" }
+      ],
+      "recommendedFor": "Recomendado para vehículos que buscan protección y brillo de larga duración."
+    },
+    {
+      "id": "ceramico-gold-3-anos",
+      "slug": "ceramico-gold-3-anos",
+      "name": "Cerámico Gold · 3 Años",
+      "category": "Máxima Protección",
+      "shortDescription": "Nuestro paquete de protección de mayor duración para conservar el acabado de tu vehículo.",
+      "featured": true,
+      "showPrice": false,
+      "includesPreviousPackage": "ceramico-gold-1-ano",
+      "includedServices": [
+        { "id": "incluye-ceramico-1-ano", "name": "Todo lo incluido en Cerámico Gold de 1 año", "icon": "shield" },
+        { "id": "preparacion-detallada-superficie", "name": "Preparación detallada de superficie", "icon": "polisher" },
+        { "id": "ceramico-3-anos", "name": "Recubrimiento cerámico de hasta 3 años", "icon": "ceramic-coating" },
+        { "id": "alta-repelencia", "name": "Alta repelencia y facilidad de mantenimiento", "icon": "water-repellent" },
+        { "id": "acabado-alto-brillo", "name": "Acabado de alto brillo y protección prolongada", "icon": "diamond-shine" }
+      ],
+      "recommendedFor": "La duración depende del mantenimiento, exposición y condiciones de uso."
+    }
+  ],
+  "additionalServices": {
+    "title": "Servicios Adicionales",
+    "subtitle": "Personaliza tu servicio",
+    "showPrices": false,
+    "items": [
+      { "id": "restauracion-focos", "name": "Restauración de focos con pulido", "icon": "headlight" },
+      { "id": "correccion-pintura", "name": "Corrección de pintura", "icon": "paint-gun" },
+      { "id": "pulido-pintura", "name": "Abrillantado / pulido de pintura", "icon": "polisher" },
+      { "id": "limpieza-cajuela", "name": "Limpieza profunda de cajuela", "icon": "car-seat" },
+      { "id": "limpieza-tapizados", "name": "Limpieza profunda de tapizados", "icon": "car-seat-clean" },
+      { "id": "vapor-interior-motor", "name": "Vapor interior + motor", "icon": "steam-cleaner" }
+    ],
+    "note": "Consulta disponibilidad. Algunos servicios requieren valoración previa."
+  },
+  "website": {
+    "servicesSection": {
+      "title": "Nuestros servicios",
+      "subtitle": "Cuidado profesional para cada nivel de detalle.",
+      "showPrices": false,
+      "showIcons": true,
+      "showDescriptions": true,
+      "showRecommendedText": true
+    },
+    "cta": {
+      "enabled": true,
+      "title": "¿Listo para darle a tu vehículo el cuidado que merece?",
+      "buttonText": "Reservar servicio",
+      "secondaryButtonText": "Consultar por WhatsApp"
+    }
+  }
+}
