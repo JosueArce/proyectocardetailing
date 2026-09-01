@@ -15,12 +15,12 @@ describe('sitio de detallado automotriz', () => {
     expect(screen.getAllByRole('img', { name: 'AutoEstudioCR Detailing' })).toHaveLength(2)
     expect(screen.getByRole('heading', { name: 'Entrega y recomendaciones' })).toBeInTheDocument()
     expect(screen.getByText('PROCESO COMPLETADO')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Próximamente.' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /experiencias que generan confianza/i })).toBeInTheDocument()
     expect(screen.queryByText(/la atención fue excelente/i)).not.toBeInTheDocument()
     expect(screen.queryByText('4.9')).not.toBeInTheDocument()
     expect(screen.queryByText('+180 clientes felices')).not.toBeInTheDocument()
     expect(screen.queryByText('12m')).not.toBeInTheDocument()
-    expect(screen.getByText('3 años')).toBeInTheDocument()
+    expect(screen.getByText('1 y 3 años')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: "MEGUIAR'S" })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'CARPRO' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'KOCH-CHEMIE' })).not.toBeInTheDocument()
@@ -29,6 +29,23 @@ describe('sitio de detallado automotriz', () => {
     expect(screen.getByRole('link', { name: /consultar por whatsapp/i })).toHaveAttribute('href', expect.stringContaining('https://wa.me/50683629162?text='))
     expect(screen.getByRole('link', { name: 'Contactar a AutoEstudioCR por WhatsApp' })).toHaveAttribute('href', expect.stringContaining('https://wa.me/50683629162?text='))
     expect(screen.getByText('Reservar por WhatsApp')).toBeInTheDocument()
+  })
+
+  it('muestra la cantidad y las opiniones recibidas desde Google Places', async () => {
+    fetch.mockImplementation(async url => {
+      if (url === '/api/reviews') return { ok: true, json: async () => ({ rating: 5, total: 2, googleMapsUrl: 'https://maps.google.com/?cid=autoestudiocr', reviews: [{ id: 'review-1', author: 'María', rating: 5, text: 'Excelente trabajo y atención.', relativeTime: 'Hace una semana' }] }) }
+      if (url === '/api/auth/me') return { ok: false, json: async () => ({ error: 'Sin sesión' }) }
+      if (url === '/api/projects') return { ok: true, json: async () => ({ projects: [] }) }
+      return { ok: true, json: async () => ({}) }
+    })
+
+    render(<App />)
+
+    expect(await screen.findByText('2', { selector: '.trust-row strong' })).toBeInTheDocument()
+    expect(screen.getByText('Opiniones en Google', { selector: '.trust-row small' })).toBeInTheDocument()
+    expect(screen.getByText(/Excelente trabajo y atención\./)).toBeInTheDocument()
+    expect(screen.getByText('María')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /ver todas en google/i })).toHaveAttribute('href', 'https://maps.google.com/?cid=autoestudiocr')
   })
 
   it('muestra SINPE, solicita comprobante y mantiene tarjeta en pausa', async () => {
@@ -47,7 +64,7 @@ describe('sitio de detallado automotriz', () => {
   })
 
   it('presenta errores de comprobante en lenguaje útil para el cliente', async () => {
-    fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Sin sesión' }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ projects: [] }) }).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.' }) })
+    fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Sin sesión' }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ projects: [] }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ reviews: [], googleMapsUrl: '' }) }).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.' }) })
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
