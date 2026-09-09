@@ -1,289 +1,85 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 
-describe('sitio de detallado automotriz', () => {
-  it('presenta el catálogo oficial sin precios', () => {
-    render(<App />)
+const googleReviews = { rating: 5, total: 2, googleMapsUrl: 'https://maps.google.com/?cid=autoestudiocr', reviews: [{ id: 'review-1', author: 'María', rating: 5, text: 'Excelente trabajo y atención.', relativeTime: 'Hace una semana' }] }
 
+const apiMock = async (url, options = {}) => {
+  if (url === '/api/projects') return { ok: true, json: async () => ({ projects: [] }) }
+  if (url === '/api/reviews') return { ok: true, json: async () => googleReviews }
+  if (url === '/api/admin/login') return { ok: true, json: async () => ({ ok: true }) }
+  if (url === '/api/admin/projects') {
+    const body = JSON.parse(options.body)
+    return { ok: true, json: async () => ({ project: { id: 'project-1', title: body.title, description: body.description, media: body.media.map((item, index) => ({ type: item.type.startsWith('video/') ? 'video' : 'image', url: `/api/projects/project-1/media/${index}` })) } }) }
+  }
+  return { ok: false, json: async () => ({ error: 'Ruta no disponible' }) }
+}
+
+beforeEach(() => vi.stubGlobal('fetch', vi.fn(apiMock)))
+afterEach(() => vi.unstubAllGlobals())
+
+describe('sitio informativo de AutoEstudioCR', () => {
+  it('muestra el catálogo sin precios, cuentas, carrito ni reservas', async () => {
+    render(<App />)
     expect(screen.getByRole('heading', { name: 'Lavado Básico' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Detallado Básico' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Detallado Premium' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Cerámico Gold · 3 Años' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Restauración de focos con pulido' })).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent(/₡[0-9]/)
-    expect(screen.getAllByRole('img', { name: 'AutoEstudioCR Detailing' })).toHaveLength(2)
-    expect(screen.getByRole('heading', { name: 'Entrega y recomendaciones' })).toBeInTheDocument()
-    expect(screen.getByText('PROCESO COMPLETADO')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /experiencias que generan confianza/i })).toBeInTheDocument()
-    expect(screen.queryByText(/la atención fue excelente/i)).not.toBeInTheDocument()
-    expect(screen.queryByText('4.9')).not.toBeInTheDocument()
-    expect(screen.queryByText('+180 clientes felices')).not.toBeInTheDocument()
-    expect(screen.queryByText('12m')).not.toBeInTheDocument()
-    expect(screen.getByText('1 y 3 años')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: "MEGUIAR'S" })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'CARPRO' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'KOCH-CHEMIE' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'VONIXX' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Instagram de AutoEstudioCR' })).toHaveAttribute('href', 'https://www.instagram.com/autoestudiocr')
-    expect(screen.getByRole('link', { name: /consultar por whatsapp/i })).toHaveAttribute('href', expect.stringContaining('https://wa.me/50683629162?text='))
-    expect(screen.getByRole('link', { name: 'Contactar a AutoEstudioCR por WhatsApp' })).toHaveAttribute('href', expect.stringContaining('https://wa.me/50683629162?text='))
-    expect(screen.getByText('Reservar por WhatsApp')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /reservar/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /mi cuenta/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /carrito/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/sinpe móvil/i)).not.toBeInTheDocument()
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/projects'))
+    expect(fetch).not.toHaveBeenCalledWith('/api/auth/me')
   })
 
-  it('muestra la cantidad y las opiniones recibidas desde Google Places', async () => {
-    fetch.mockImplementation(async url => {
-      if (url === '/api/reviews') return { ok: true, json: async () => ({ rating: 5, total: 2, googleMapsUrl: 'https://maps.google.com/?cid=autoestudiocr', reviews: [{ id: 'review-1', author: 'María', rating: 5, text: 'Excelente trabajo y atención.', relativeTime: 'Hace una semana' }] }) }
-      if (url === '/api/auth/me') return { ok: false, json: async () => ({ error: 'Sin sesión' }) }
-      if (url === '/api/projects') return { ok: true, json: async () => ({ projects: [] }) }
-      return { ok: true, json: async () => ({}) }
-    })
-
+  it('dirige todos los paquetes y adicionales a WhatsApp', () => {
     render(<App />)
+    const packageCard = screen.getByRole('heading', { name: 'Lavado Básico' }).closest('article')
+    expect(within(packageCard).getByRole('link', { name: /consultar por whatsapp/i })).toHaveAttribute('href', expect.stringContaining('wa.me/50683629162'))
+    expect(within(packageCard).getByRole('link', { name: /consultar por whatsapp/i })).toHaveAttribute('href', expect.stringContaining('Lavado%20B%C3%A1sico'))
+    expect(screen.getByRole('link', { name: /consultar por restauración de focos/i })).toHaveAttribute('href', expect.stringContaining('wa.me/50683629162'))
+    expect(screen.getByRole('link', { name: 'Contactar a AutoEstudioCR por WhatsApp' })).toHaveAttribute('href', expect.stringContaining('wa.me/50683629162'))
+  })
 
+  it('muestra opiniones reales recibidas desde Google Places', async () => {
+    render(<App />)
     expect(await screen.findByText('2', { selector: '.trust-row strong' })).toBeInTheDocument()
-    expect(screen.getByText('Opiniones en Google', { selector: '.trust-row small' })).toBeInTheDocument()
-    expect(screen.getByText(/Excelente trabajo y atención\./)).toBeInTheDocument()
+    expect(screen.getByText(/Excelente trabajo y atención/)).toBeInTheDocument()
     expect(screen.getByText('María')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /ver todas en google/i })).toHaveAttribute('href', 'https://maps.google.com/?cid=autoestudiocr')
+    expect(screen.getByRole('link', { name: /ver todas en google/i })).toHaveAttribute('href', googleReviews.googleMapsUrl)
   })
 
-  it('muestra SINPE, solicita comprobante y mantiene tarjeta en pausa', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
-    const dialog = screen.getByRole('dialog')
-    expect(within(dialog).getByText('+506 8362-9162')).toBeInTheDocument()
-    expect(within(dialog).getByText('Seleccionar archivo')).toBeInTheDocument()
-    expect(within(dialog).getByLabelText(/comprobante sinpe/i)).toBeRequired()
-    expect(within(dialog).getByRole('radio', { name: /tarjeta/i })).toBeDisabled()
-    const receipt = new File(['receipt'], 'comprobante.pdf', { type: 'application/pdf' })
-    await user.upload(within(dialog).getByLabelText(/comprobante sinpe/i), receipt)
-    await waitFor(() => expect(within(dialog).getByText(/comprobante\.pdf/)).toBeInTheDocument())
-  })
-
-  it('presenta errores de comprobante en lenguaje útil para el cliente', async () => {
-    fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Sin sesión' }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ projects: [] }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ reviews: [], googleMapsUrl: '' }) }).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'No pudimos adjuntar el comprobante. Verifica que sea una imagen o PDF menor de 5 MB e intenta nuevamente; también puedes elegir pago en efectivo.' }) })
-    const user = userEvent.setup()
-    render(<App />)
-    await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
-    const dialog = screen.getByRole('dialog')
-    await user.type(within(dialog).getByLabelText(/nombre completo/i), 'Sofía')
-    await user.type(within(dialog).getByLabelText(/teléfono/i), '88881234')
-    await user.type(within(dialog).getByLabelText(/correo/i), 'sofia@example.com')
-    await user.type(within(dialog).getByLabelText(/vehículo/i), 'Nissan Navara')
-    await user.click(within(dialog).getByRole('checkbox', { name: /lavado básico/i }))
-    await user.type(within(dialog).getByLabelText(/fecha/i), '2030-08-22')
-    await user.selectOptions(within(dialog).getByLabelText(/hora/i), '14:00')
-    await user.click(within(dialog).getByRole('radio', { name: /efectivo/i }))
-    await user.click(within(dialog).getByRole('button', { name: /solicitar reservación/i }))
-    expect(within(dialog).getByRole('alert')).toHaveTextContent('No pudimos adjuntar el comprobante')
-    expect(within(dialog).getByRole('alert')).not.toHaveTextContent(/Cloud Storage|GCP|diagnóstico administrativo/i)
-  })
-
-  it('registra una cita y permite gestionarla desde el panel', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
-    const dialog = screen.getByRole('dialog')
-    await user.type(within(dialog).getByLabelText(/nombre completo/i), 'Sofía Méndez')
-    await user.type(within(dialog).getByLabelText(/teléfono/i), '88881234')
-    await user.type(within(dialog).getByLabelText(/correo/i), 'sofia@example.com')
-    await user.type(within(dialog).getByLabelText(/vehículo/i), 'Mazda 3 2024')
-    await user.click(within(dialog).getByRole('checkbox', { name: /lavado básico/i }))
-    await user.type(within(dialog).getByLabelText(/fecha/i), '2030-05-20')
-    await user.selectOptions(within(dialog).getByLabelText(/hora/i), '11:00')
-    await user.click(within(dialog).getByRole('radio', { name: /efectivo/i }))
-    await user.click(within(dialog).getByRole('button', { name: /solicitar reservación/i }))
-
-    expect(within(dialog).getByRole('heading', { name: /gracias, sofía/i })).toBeInTheDocument()
-    const storedBookings = JSON.parse(localStorage.getItem('detail-bookings'))
-    expect(storedBookings).toHaveLength(1)
-    expect(storedBookings[0].cost).toBe(0)
-    expect(fetch).toHaveBeenCalledWith('/api/bookings', expect.objectContaining({ method: 'POST' }))
-
-    await user.click(within(dialog).getByRole('button', { name: 'Listo' }))
-    await user.click(screen.getByRole('button', { name: 'Administrar' }))
-    const login = screen.getByRole('dialog')
-    await user.type(within(login).getByLabelText(/correo/i), 'josue.arce.gonzalez@gmail.com')
-    await user.type(within(login).getByLabelText(/contraseña/i), 'Admin123!')
-    await user.click(within(login).getByRole('button', { name: 'Ingresar' }))
-    const admin = screen.getByText('PANEL DE ADMINISTRACIÓN').closest('section')
-    expect(within(admin).getByRole('img', { name: 'Servicios disponibles' })).toBeInTheDocument()
-    expect(admin).not.toHaveTextContent(/GCP|Firestore|Cloud Storage/i)
-    fireEvent.change(within(admin).getByLabelText('Mes a consultar'), { target: { value: '2030-05' } })
-    expect(within(admin).getByText('Sofía Méndez')).toBeInTheDocument()
-    expect(within(admin).getByText('Mazda 3 2024')).toBeInTheDocument()
-    expect(within(admin).getByRole('link', { name: /whatsapp/i })).toHaveAttribute('href', expect.stringContaining('88881234'))
-    await user.click(within(admin).getByRole('button', { name: /ver reserva y gestionar/i }))
-    const detail = screen.getByText('DETALLE DE LA RESERVA').closest('section')
-    expect(within(detail).getByRole('heading', { name: 'Lavado Básico' })).toBeInTheDocument()
-    const finishButton = within(detail).getByRole('button', { name: /finalizar/i })
-    expect(finishButton).toHaveAttribute('aria-disabled', 'true')
-    const updatesBeforeFinish = fetch.mock.calls.filter(([url]) => url === '/api/booking-updates').length
-    await user.click(finishButton)
-    expect(within(detail).getByRole('alert')).toHaveTextContent('Primero debes registrar el pago')
-    expect(fetch.mock.calls.filter(([url]) => url === '/api/booking-updates')).toHaveLength(updatesBeforeFinish)
-    await user.click(within(detail).getByRole('button', { name: /aprobar/i }))
-    expect(fetch).toHaveBeenCalledWith('/api/booking-updates', expect.objectContaining({ method: 'POST' }))
-    await user.click(within(detail).getByRole('button', { name: /acabado exterior/i }))
-    expect(within(detail).getByAltText('Acabado exterior')).toBeInTheDocument()
-    await user.click(within(detail).getByRole('button', { name: /marcar efectivo como pagado/i }))
-    expect(within(detail).getByRole('button', { name: /finalizar/i })).toHaveAttribute('aria-disabled', 'false')
-    await user.click(within(detail).getByRole('button', { name: 'Cerrar' }))
-    expect(within(admin).getByText('Confirmada')).toBeInTheDocument()
-  })
-
-  it('combina servicios desde el carrito y los conserva al reservar', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    const interiorCard = screen.getByRole('heading', { name: 'Lavado Básico' }).closest('article')
-    await user.click(within(interiorCard).getByRole('button', { name: /agregar a mi selección/i }))
-    const exteriorCard = screen.getByRole('heading', { name: 'Detallado Básico' }).closest('article')
-    await user.click(within(exteriorCard).getByRole('button', { name: /agregar a mi selección/i }))
-    await user.click(screen.getByRole('button', { name: /carrito de servicios, 2 seleccionados/i }))
-    const cart = screen.getByRole('complementary', { name: 'Carrito de servicios' })
-    expect(within(cart).getByText('Lavado Básico')).toBeInTheDocument()
-    expect(within(cart).getByText('Detallado Básico')).toBeInTheDocument()
-    expect(within(cart).queryByText(/₡[0-9]/)).not.toBeInTheDocument()
-    await user.click(within(cart).getByRole('button', { name: /continuar con la reserva/i }))
-    const dialog = screen.getByRole('dialog')
-    expect(within(dialog).getByRole('checkbox', { name: /lavado básico/i })).toBeChecked()
-    expect(within(dialog).getByRole('checkbox', { name: /detallado básico/i })).toBeChecked()
-    expect(within(dialog).getByText('2 servicios seleccionados')).toBeInTheDocument()
-  })
-
-  it('permite publicar un proyecto con descripción desde administración', async () => {
+  it('mantiene el acceso administrativo solo para publicar proyectos', async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getByRole('button', { name: 'Administrar' }))
     const login = screen.getByRole('dialog')
-    await user.type(within(login).getByLabelText(/correo/i), 'josue.arce.gonzalez@gmail.com')
-    await user.type(within(login).getByLabelText(/contraseña/i), 'Admin123!')
+    expect(within(login).getByText(/únicamente para publicar trabajos/i)).toBeInTheDocument()
+    await user.type(within(login).getByLabelText('Correo'), 'josue.arce.gonzalez@gmail.com')
+    await user.type(within(login).getByLabelText('Contraseña'), 'Admin123!')
     await user.click(within(login).getByRole('button', { name: 'Ingresar' }))
-    const admin = screen.getByText('PANEL DE ADMINISTRACIÓN').closest('section')
-    await user.type(within(admin).getByLabelText(/nombre del proyecto/i), 'Toyota Hilux renovada')
-    await user.type(within(admin).getByLabelText(/descripción del trabajo/i), 'Lavado técnico, pulido y protección de carrocería.')
-    await user.upload(within(admin).getByLabelText(/fotos y videos del proyecto/i), [
-      new File(['foto'], 'resultado.jpg', { type: 'image/jpeg' }),
-      new File(['video'], 'proceso.mov', { type: 'video/quicktime' }),
-    ])
-    await waitFor(() => expect(within(admin).getByText('2 archivos seleccionados')).toBeInTheDocument())
-    await user.click(within(admin).getByRole('button', { name: /publicar en resultados/i }))
-    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/admin/projects', expect.objectContaining({ method: 'POST' })))
-    const projectRequest = fetch.mock.calls.find(([url]) => url === '/api/admin/projects')
-    expect(JSON.parse(projectRequest[1].body).media).toHaveLength(2)
-    await user.click(within(admin).getByRole('button', { name: 'Cerrar' }))
-    expect(screen.getByRole('heading', { name: 'Toyota Hilux renovada' })).toBeInTheDocument()
-    expect(screen.getByText('Lavado técnico, pulido y protección de carrocería.')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Publicar proyecto' })).toBeInTheDocument()
+    expect(screen.queryByText(/citas del mes/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/promociones/i)).not.toBeInTheDocument()
   })
 
-  it('muestra el estado vacío del panel cuando no hay citas', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-    await user.click(screen.getByRole('button', { name: 'Administrar' }))
-    const login = screen.getByRole('dialog')
-    await user.type(within(login).getByLabelText(/correo/i), 'josue.arce.gonzalez@gmail.com')
-    await user.type(within(login).getByLabelText(/contraseña/i), 'Admin123!')
-    await user.click(within(login).getByRole('button', { name: 'Ingresar' }))
-    expect(screen.getByText('No hay citas para este mes.')).toBeInTheDocument()
-  })
-
-  it('permite crear códigos desde la pestaña Promociones', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-    await user.click(screen.getByRole('button', { name: 'Administrar' }))
-    const login = screen.getByRole('dialog')
-    await user.type(within(login).getByLabelText(/correo/i), 'josue.arce.gonzalez@gmail.com')
-    await user.type(within(login).getByLabelText(/contraseña/i), 'Admin123!')
-    await user.click(within(login).getByRole('button', { name: 'Ingresar' }))
-    const admin = screen.getByText('PANEL DE ADMINISTRACIÓN').closest('section')
-    await user.click(within(admin).getByRole('tab', { name: 'Promociones' }))
-    await user.type(within(admin).getByLabelText('Código'), 'rojo10')
-    await user.type(within(admin).getByLabelText('Porcentaje'), '10')
-    await user.type(within(admin).getByLabelText('Descripción'), '10% en el próximo lavado')
-    await user.click(within(admin).getByRole('button', { name: 'Crear código' }))
-    expect(fetch).toHaveBeenCalledWith('/api/admin/promotions', expect.objectContaining({ method: 'POST' }))
-    expect(await within(admin).findByText('ROJO10')).toBeInTheDocument()
-  })
-
-  it('permite crear una cuenta opcional y registrar varios vehículos', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-    expect(screen.getAllByRole('button', { name: /reservar mi cita/i })[0]).toBeEnabled()
-    await user.click(screen.getByRole('button', { name: 'Mi cuenta' }))
-    const access = screen.getByRole('dialog')
-    await user.click(within(access).getByRole('button', { name: 'Registrarme' }))
-    await user.type(within(access).getByLabelText(/nombre completo/i), 'Ana López')
-    await user.type(within(access).getByLabelText(/teléfono/i), '88889999')
-    await user.type(within(access).getByLabelText(/correo/i), 'ana@example.com')
-    await user.type(within(access).getByLabelText(/contraseña/i), 'secreto1')
-    await user.click(within(access).getByRole('button', { name: 'Crear cuenta' }))
-    expect(fetch).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({ method: 'POST' }))
-    expect(localStorage.getItem('detail-accounts')).toBeNull()
-    await user.click(await screen.findByRole('button', { name: 'Hola, Ana' }))
-    const portal = screen.getByRole('dialog')
-    await user.type(within(portal).getByLabelText('Marca'), 'Toyota')
-    await user.type(within(portal).getByLabelText('Modelo'), 'RAV4')
-    await user.type(within(portal).getByLabelText('Año'), '2023')
-    await user.click(within(portal).getByRole('button', { name: /agregar vehículo/i }))
-    expect(fetch).toHaveBeenCalledWith('/api/vehicles', expect.objectContaining({ method: 'POST' }))
-    expect(within(portal).getByText('Toyota RAV4')).toBeInTheDocument()
-    await user.click(within(portal).getByRole('button', { name: 'Cerrar' }))
-    await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
-    const booking = screen.getByRole('dialog')
-    await user.type(within(booking).getByPlaceholderText('AUTOESTUDIO'), 'rojo10')
-    await user.click(within(booking).getByRole('button', { name: 'Redimir' }))
-    expect(await within(booking).findByText(/10% de descuento/i)).toBeInTheDocument()
-    expect(fetch).toHaveBeenCalledWith('/api/promotions/validate', expect.objectContaining({ method: 'POST' }))
-  })
-
-  it('permite solicitar un enlace para recuperar la contraseña', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-    await user.click(screen.getByRole('button', { name: 'Mi cuenta' }))
-    const access = screen.getByRole('dialog')
-    await user.click(within(access).getByRole('button', { name: '¿Olvidaste tu contraseña?' }))
-    expect(within(access).getByRole('heading', { name: 'Recupera tu contraseña' })).toBeInTheDocument()
-    await user.type(within(access).getByLabelText('Correo'), 'cliente@example.com')
-    await user.click(within(access).getByRole('button', { name: 'Enviar enlace' }))
-    expect(fetch).toHaveBeenCalledWith('/api/auth/password-reset', expect.objectContaining({ method: 'POST', body: JSON.stringify({ email: 'cliente@example.com' }) }))
-    expect(await within(access).findByRole('status')).toHaveTextContent('Si existe una cuenta con ese correo')
-    await user.click(within(access).getByRole('button', { name: /volver a iniciar sesión/i }))
-    expect(within(access).getByRole('heading', { name: 'Bienvenido de nuevo' })).toBeInTheDocument()
-  })
-
-  it('impide reservar una fecha bloqueada por administración', async () => {
+  it('publica varias fotografías o videos desde el panel', async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getByRole('button', { name: 'Administrar' }))
     let dialog = screen.getByRole('dialog')
-    await user.type(within(dialog).getByLabelText(/correo/i), 'josue.arce.gonzalez@gmail.com')
-    await user.type(within(dialog).getByLabelText(/contraseña/i), 'Admin123!')
+    await user.type(within(dialog).getByLabelText('Correo'), 'josue.arce.gonzalez@gmail.com')
+    await user.type(within(dialog).getByLabelText('Contraseña'), 'Admin123!')
     await user.click(within(dialog).getByRole('button', { name: 'Ingresar' }))
     dialog = screen.getByRole('dialog')
-    fireEvent.change(within(dialog).getByLabelText('Fecha a bloquear'), { target: { value: '2030-06-15' } })
-    await user.click(within(dialog).getByRole('button', { name: 'Bloquear' }))
-    await user.click(within(dialog).getByRole('button', { name: 'Cerrar' }))
-    await user.click(screen.getAllByRole('button', { name: /reservar mi cita/i })[0])
-    dialog = screen.getByRole('dialog')
-    fireEvent.change(within(dialog).getByLabelText('Fecha'), { target: { value: '2030-06-15' } })
-    expect(within(dialog).getByText('Esta fecha no está disponible.')).toBeInTheDocument()
-    expect(within(dialog).getByRole('button', { name: /solicitar reservación/i })).toBeDisabled()
-  })
-
-  it('permite al cliente abrir una cita histórica y ver sus evidencias', async () => {
-    const historical = { id: 2, name: 'Ana López', email: 'ana@example.com', phone: '88889999', vehicle: 'Toyota RAV4', service: 'Signature', date: '2025-02-10', time: '09:00', cost: 60000, status: 'Completada', workDone: 'Descontaminación y cera premium.', evidence: [{ id: 3, type: 'image', url: 'https://example.com/final.jpg', label: 'Resultado final' }] }
-    fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ account: { id: 'customer-test', name: 'Ana López', email: 'ana@example.com', phone: '88889999', role: 'customer', cars: [] }, bookings: [historical] }) })
-    const user = userEvent.setup()
-    render(<App />)
-    await user.click(await screen.findByRole('button', { name: 'Hola, Ana' }))
-    const portal = screen.getByRole('dialog')
-    await user.click(within(portal).getByRole('button', { name: /abrir detalle de signature/i }))
-    expect(screen.getByText('Descontaminación y cera premium.')).toBeInTheDocument()
-    expect(screen.getByAltText('Resultado final')).toBeInTheDocument()
+    await user.type(within(dialog).getByLabelText(/nombre del proyecto/i), 'Toyota renovado')
+    await user.type(within(dialog).getByLabelText(/descripción del trabajo/i), 'Limpieza profunda y protección.')
+    await user.upload(within(dialog).getByLabelText(/fotos y videos/i), [new File(['foto'], 'final.jpg', { type: 'image/jpeg' }), new File(['video'], 'proceso.mp4', { type: 'video/mp4' })])
+    expect(await within(dialog).findByText('2 archivos seleccionados')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: /publicar en resultados/i }))
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/admin/projects', expect.objectContaining({ method: 'POST' })))
+    expect(screen.getByRole('heading', { name: 'Toyota renovado' })).toBeInTheDocument()
   })
 })

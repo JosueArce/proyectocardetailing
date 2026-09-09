@@ -13,7 +13,7 @@ BUILD_SA="$BUILD_SA_NAME@$PROJECT_ID.iam.gserviceaccount.com"
 RUNTIME_SA="$RUNTIME_SA_NAME@$PROJECT_ID.iam.gserviceaccount.com"
 
 gcloud config set project "$PROJECT_ID"
-gcloud services enable cloudbuild.googleapis.com run.googleapis.com artifactregistry.googleapis.com iam.googleapis.com calendar-json.googleapis.com
+gcloud services enable cloudbuild.googleapis.com run.googleapis.com artifactregistry.googleapis.com iam.googleapis.com firestore.googleapis.com storage.googleapis.com
 
 gcloud artifacts repositories describe "$REPOSITORY" --location="$REGION" >/dev/null 2>&1 || \
   gcloud artifacts repositories create "$REPOSITORY" --repository-format=docker --location="$REGION"

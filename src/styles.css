@@ -104,3 +104,7 @@
 
 /* Recuperación de contraseña dentro del acceso de clientes. */
 .forgot-password,.back-to-login{width:max-content;border:0;background:transparent;color:#e30613;padding:2px 0;font-size:10px;font-weight:800}.forgot-password{justify-self:end}.back-to-login{justify-self:center;margin-top:3px}.forgot-password:hover,.back-to-login:hover{text-decoration:underline}.access-modal .form-notice{text-align:center}
+
+/* Sitio informativo: toda consulta comercial se deriva a WhatsApp. */
+.catalog-contact{width:100%;margin-top:auto;text-decoration:none}.addon-card>a{flex:0 0 auto;border:1px solid #e30613;background:#e30613;color:#fff;padding:10px 13px;text-decoration:none;font-size:9px;font-weight:800}.addon-card>a:hover,.addon-card>a:focus-visible{background:#fff;color:#050505}.services-cta>a{width:max-content;text-decoration:none}.portfolio-admin-title{display:flex;align-items:center;justify-content:space-between;gap:18px}.portfolio-admin-title h2{margin-bottom:8px}.portfolio-admin-title p{margin:0;color:#050505a6}.portfolio-admin-title>span{display:grid;place-items:center;width:48px;height:48px;background:#e30613;color:#fff}.portfolio-admin-list{padding:18px;border:1px solid #050505}.portfolio-admin-list h3{margin:0 0 6px}.portfolio-admin-list p{margin:0;color:#05050599;font-size:11px}.portfolio-dashboard{width:min(900px,100%)}
+@media(max-width:560px){.services-cta>a{width:100%}.addon-card{align-items:flex-start;flex-wrap:wrap}.addon-card>a{margin-left:53px}.portfolio-admin-title{align-items:flex-start}.desktop-cta{display:none}}

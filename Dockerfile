@@ -1,16 +1,13 @@
 # Etapa de compilación: instala dependencias, ejecuta pruebas y genera /dist.
 FROM node:22-alpine AS build
 WORKDIR /app
-ARG VITE_SINPE_PHONE="+506 8362-9162"
-ENV VITE_SINPE_PHONE=$VITE_SINPE_PHONE
-
 COPY package*.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY . .
-RUN node --check src/test/setup.js && npm test && npm run build
+RUN node --check src/test/setup.js && npm run lint && npm test && npm run build
 
-# Etapa de ejecución: el servidor crea eventos en Google Calendar y sirve el SPA.
+# Etapa de ejecución: el servidor entrega el SPA, reseñas y portafolio.
 RUN npm prune --omit=dev
 
 # Verifica durante el build que el mismo servidor de producción pueda iniciar
@@ -30,7 +27,7 @@ ENV NODE_ENV=production
 ENV NODE_OPTIONS=--max-old-space-size=384
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
-COPY package.json server.js notifications.js benefits.js services.json ./
+COPY package.json server.js ./
 
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=5 \

@@ -8,7 +8,7 @@ for argument in "$@"; do
     -h|--help)
       printf 'Uso: %s [--hard-reset]\n\n' "$0"
       printf 'Sin opciones prepara o revalida la infraestructura sin borrar datos.\n'
-      printf '%s\n' '--hard-reset elimina usuarios de Firebase Authentication, documentos de Firestore y objetos del bucket.'
+      printf '%s\n' '--hard-reset elimina datos heredados de Firebase Authentication, todos los documentos de Firestore y todos los objetos del bucket.'
       exit 0
       ;;
     *) printf 'Opción desconocida: %s\nUsa --help para consultar las opciones.\n' "$argument" >&2; exit 2 ;;
@@ -20,7 +20,8 @@ REGION="${REGION:-us-west1}"
 BUCKET="${BUCKET:-$PROJECT_ID-estudio-auto-evidence}"
 RUNTIME_SA="${RUNTIME_SA:-estudio-auto-calendar@$PROJECT_ID.iam.gserviceaccount.com}"
 
-gcloud services enable firestore.googleapis.com storage.googleapis.com identitytoolkit.googleapis.com --project="$PROJECT_ID"
+gcloud services enable firestore.googleapis.com storage.googleapis.com --project="$PROJECT_ID"
+if [ "$HARD_RESET" = true ]; then gcloud services enable identitytoolkit.googleapis.com --project="$PROJECT_ID"; fi
 
 gcloud firestore databases describe --database='(default)' --project="$PROJECT_ID" >/dev/null 2>&1 || \
   gcloud firestore databases create --database='(default)' --location="$REGION" --type=firestore-native --project="$PROJECT_ID"
@@ -35,7 +36,7 @@ gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" --member="serviceAc
 
 if [ "$HARD_RESET" = true ]; then
   printf '\nADVERTENCIA: se eliminarán permanentemente todos los datos de prueba de %s:\n' "$PROJECT_ID" >&2
-  printf '  - usuarios de Firebase Authentication\n  - documentos de Firestore\n  - objetos de gs://%s\n\n' "$BUCKET" >&2
+  printf '  - usuarios heredados de Firebase Authentication\n  - todos los documentos de Firestore\n  - objetos de gs://%s\n\n' "$BUCKET" >&2
   printf 'El proceso comenzará en 5 segundos. Presiona Ctrl+C para cancelarlo.\n' >&2
   sleep 5
   ACCESS_TOKEN="$(gcloud auth print-access-token)" PROJECT_ID="$PROJECT_ID" BUCKET="$BUCKET" \
@@ -53,7 +54,7 @@ gcloud storage cp "$MARKER_DIR/.keep" "gs://$BUCKET/projects/_estructura/photos/
 gcloud storage cp "$MARKER_DIR/.keep" "gs://$BUCKET/projects/_estructura/videos/.keep" >/dev/null
 
 if [ "$HARD_RESET" = true ]; then
-  printf 'Hard reset completado. Firestore, Firebase Authentication y gs://%s quedaron en estado inicial en %s.\n' "$BUCKET" "$REGION"
+  printf 'Hard reset completado. Firebase Authentication, Firestore y gs://%s quedaron sin datos heredados en %s.\n' "$BUCKET" "$REGION"
 else
   printf 'Firestore y gs://%s están preparados en %s. No se borraron datos.\n' "$BUCKET" "$REGION"
 fi

@@ -118,8 +118,8 @@
     },
     "cta": {
       "enabled": true,
-      "title": "¿Listo para darle a tu vehículo el cuidado que merece?",
-      "buttonText": "Reservar servicio",
+      "title": "¿Quieres darle a tu vehículo el cuidado que merece?",
+      "buttonText": "Consultar por WhatsApp",
       "secondaryButtonText": "Consultar por WhatsApp"
     }
   }
