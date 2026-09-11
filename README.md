@@ -17,6 +17,8 @@ Incluye:
 - metadatos SEO, `robots.txt` y `sitemap.xml`;
 - despliegue automatizado en Cloud Run.
 
+El encabezado utiliza `public/autoestudiocr-header-logo.svg`, que conserva dentro de un contenedor SVG textual la imagen circular oficial proporcionada. El pie de página mantiene la versión horizontal `public/autoestudiocr-logo.svg` para aprovechar mejor el espacio disponible.
+
 ## Desarrollo
 
 ```bash

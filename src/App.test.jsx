@@ -25,6 +25,7 @@ describe('sitio informativo de AutoEstudioCR', () => {
     expect(screen.getByRole('heading', { name: 'Detallado Premium' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Cerámico Gold · 3 Años' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Restauración de focos con pulido' })).toBeInTheDocument()
+    expect(screen.getByRole('banner').querySelector('img')).toHaveAttribute('src', '/autoestudiocr-header-logo.svg')
     expect(document.body).not.toHaveTextContent(/₡[0-9]/)
     expect(screen.queryByRole('button', { name: /reservar/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /mi cuenta/i })).not.toBeInTheDocument()

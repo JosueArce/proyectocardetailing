@@ -1,5 +1,5 @@
 import catalog from './serviceCatalogData'
-import { Car, Droplets, Headlight, PaintShield, Polisher, Seat, ShieldCheck, Sparkles, Spray, Wheel, Window } from './icons'
+import { Car, Check, Droplets, Headlight, PaintShield, Polisher, Seat, ShieldCheck, Sparkles, Spray, Wheel, Window } from './icons'
 
 const iconComponents = {
   'car-wash-foam': Droplets,
