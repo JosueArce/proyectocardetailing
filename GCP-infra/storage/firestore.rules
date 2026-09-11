@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // El navegador no accede directamente. Cloud Run usa IAM y Admin SDK.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
