@@ -27,6 +27,7 @@
       "showPrice": false,
       "includedServices": [
         { "id": "prelavado-espuma", "name": "Prelavado con baño de espuma", "icon": "car-wash-foam" },
+        { "id": "shampoo-ph-balanceado", "name": "Uso de shampoo pH balanceado", "icon": "car-wash" },
         { "id": "detallado-exterior", "name": "Detallado exterior", "icon": "car" },
         { "id": "detallado-interior", "name": "Detallado interior", "icon": "car-seat" },
         { "id": "aspirado-interior", "name": "Aspirado del interior", "icon": "vacuum" },
@@ -34,6 +35,7 @@
         { "id": "limpieza-basica-vidrios", "name": "Limpieza básica de vidrios", "icon": "car-window" },
         { "id": "limpieza-guardabarros", "name": "Limpieza de guardabarros", "icon": "wheel-arch" },
         { "id": "proteccion-uv-plasticos", "name": "Protección UV en plásticos internos y externos", "icon": "water-shield" },
+        { "id": "cera-spray-profesional", "name": "Aplicación de cera de protección en spray profesional", "icon": "spray" },
         { "id": "limpieza-general-cajuela", "name": "Limpieza general de cajuela", "icon": "car-seat-clean" }
       ],
       "recommendedFor": "Ideal para una limpieza más completa con protección interior y exterior."
@@ -55,6 +57,9 @@
         { "id": "limpieza-detallada-motor", "name": "Limpieza detallada del motor", "icon": "engine" },
         { "id": "hidratacion-cueros", "name": "Hidratación de cueros, si el vehículo los posee", "icon": "car-seat" },
         { "id": "detallado-profundo-aros", "name": "Detallado profundo de aros", "icon": "wheel" },
+        { "id": "proteccion-hidrofobica-llantas", "name": "Aplicación de protección hidrofóbica en llantas", "icon": "water-repellent" },
+        { "id": "limpieza-detallada-vidrios", "name": "Limpieza detallada de vidrios exteriores e interiores", "icon": "windshield" },
+        { "id": "limpieza-bordes-zonas-dificiles", "name": "Limpieza de bordes de puertas y zonas de difícil acceso", "icon": "spray" },
         { "id": "limpieza-placas-logos-parrilla", "name": "Limpieza de placas, logos y parrilla", "icon": "sparkles" }
       ],
       "recommendedFor": "Recomendado para vehículos que requieren una recuperación profunda y minuciosa."

@@ -30,6 +30,21 @@ describe('catálogo oficial de servicios', () => {
     expect(catalog.additionalServices.items.every(item => item.icon)).toBe(true)
   })
 
+  it('incluye los tratamientos añadidos a los detallados básico y premium', () => {
+    const basic = catalog.services.find(service => service.id === 'detallado-basico')
+    const premium = catalog.services.find(service => service.id === 'detallado-premium')
+
+    expect(basic.includedServices.map(item => item.name)).toEqual(expect.arrayContaining([
+      'Uso de shampoo pH balanceado',
+      'Aplicación de cera de protección en spray profesional',
+    ]))
+    expect(premium.includedServices.map(item => item.name)).toEqual(expect.arrayContaining([
+      'Aplicación de protección hidrofóbica en llantas',
+      'Limpieza detallada de vidrios exteriores e interiores',
+      'Limpieza de bordes de puertas y zonas de difícil acceso',
+    ]))
+  })
+
   it('ofrece protección cerámica de uno a cinco años', () => {
     const ceramic = catalog.services.find(service => service.id === 'paquete-ceramico')
     expect(ceramic.includedServices.map(item => item.name)).toContain('Recubrimiento cerámico con opciones de 1 a 5 años')
