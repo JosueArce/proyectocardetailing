@@ -17,7 +17,9 @@ Incluye:
 - metadatos SEO, `robots.txt` y `sitemap.xml`;
 - despliegue automatizado en Cloud Run.
 
-El encabezado utiliza `public/autoestudiocr-header-logo.svg`, que conserva dentro de un contenedor SVG textual la imagen circular oficial proporcionada. El pie de página mantiene la versión horizontal `public/autoestudiocr-logo.svg` para aprovechar mejor el espacio disponible.
+El catálogo comercial se organiza en **Lavado Básico**, **Detallado Básico**, **Detallado Premium** y **Paquete Cerámico**, seguido por una sección independiente con nueve servicios adicionales. El paquete cerámico ofrece recubrimientos de 1 a 5 años según la elección y valoración del cliente.
+
+El encabezado utiliza `public/autoestudiocr-header-logo.svg`, que conserva dentro de un contenedor SVG textual la imagen horizontal oficial proporcionada. El pie de página mantiene `public/autoestudiocr-logo.svg`.
 
 ## Desarrollo
 

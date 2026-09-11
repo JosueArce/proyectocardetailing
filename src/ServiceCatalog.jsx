@@ -15,6 +15,7 @@ const iconComponents = {
   checklist: Check,
   car: Car,
   decontamination: Spray,
+  spray: Spray,
   windshield: Window,
   'water-shield': ShieldCheck,
   shield: ShieldCheck,

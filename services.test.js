@@ -5,8 +5,7 @@ const expectedServiceOrder = [
   'lavado-basico',
   'detallado-basico',
   'detallado-premium',
-  'ceramico-gold-1-ano',
-  'ceramico-gold-3-anos',
+  'paquete-ceramico',
 ]
 
 describe('catálogo oficial de servicios', () => {
@@ -27,7 +26,13 @@ describe('catálogo oficial de servicios', () => {
   it('define inclusiones, iconos y servicios adicionales', () => {
     expect(catalog.services.every(service => service.includedServices.length > 0)).toBe(true)
     expect(catalog.services.flatMap(service => service.includedServices).every(item => item.icon)).toBe(true)
-    expect(catalog.additionalServices.items).toHaveLength(6)
+    expect(catalog.additionalServices.items).toHaveLength(9)
     expect(catalog.additionalServices.items.every(item => item.icon)).toBe(true)
+  })
+
+  it('ofrece protección cerámica de uno a cinco años', () => {
+    const ceramic = catalog.services.find(service => service.id === 'paquete-ceramico')
+    expect(ceramic.includedServices.map(item => item.name)).toContain('Recubrimiento cerámico con opciones de 1 a 5 años')
+    expect(ceramic.recommendedFor).toMatch(/entre 1 y 5 años/i)
   })
 })
