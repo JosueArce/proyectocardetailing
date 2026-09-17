@@ -3,6 +3,7 @@ import { ArrowRight, Car, ChevronRight, Instagram, Mail, Menu, MessageCircle, Sh
 import { AdminLogin, AdminPortal } from './PortalPanels'
 import { AddOn, ServiceCard } from './ServiceCatalog'
 import catalog from './serviceCatalogData'
+import { trackWhatsappContact } from './analytics'
 
 const sampleProjects = [
   { id: 'demo-exterior', title: 'Renovación exterior', description: 'Lavado técnico, descontaminación y acabado brillante de la carrocería.', media: [{ type: 'image', url: 'https://images.unsplash.com/photo-1507136566006-cfc505b114fc?auto=format&fit=crop&w=1200&q=85' }] },
@@ -11,8 +12,51 @@ const sampleProjects = [
 ]
 const whatsappBase = 'https://wa.me/50683629162'
 const whatsappHref = subject => `${whatsappBase}?text=${encodeURIComponent(subject ? `Hola AutoEstudioCR, quiero consultar por ${subject}.` : 'Hola AutoEstudioCR, quiero información sobre sus servicios de detallado.')}`
+const whatsappClick = buttonLocation => () => trackWhatsappContact(buttonLocation)
 
-function App() {
+function SiteHeader({ menu, setMenu, openAdmin, internalPage = false }) {
+  const sectionHref = section => `${internalPage ? '/' : ''}#${section}`
+  return <header className="header">
+    <a className="brand brand-logo" href={sectionHref('inicio')} aria-label="AutoEstudioCR Detailing, inicio"><img src="/autoestudiocr-header-logo.svg" alt="AutoEstudioCR Detailing"/></a>
+    <nav className={menu ? 'nav open' : 'nav'} aria-label="Navegación principal">
+      <a href={sectionHref('servicios')} onClick={() => setMenu(false)}>Servicios</a><a href={sectionHref('galeria')} onClick={() => setMenu(false)}>Resultados</a><a href={sectionHref('proceso')} onClick={() => setMenu(false)}>Proceso</a><a href={sectionHref('opiniones')} onClick={() => setMenu(false)}>Opiniones</a>
+      {!internalPage && <button className="admin-link" onClick={openAdmin}>Administrar</button>}
+    </nav>
+    <a className="btn btn-small desktop-cta" href={whatsappHref()} target="_blank" rel="noreferrer" onClick={whatsappClick(internalPage ? 'thank_you_header' : 'header')}>Contáctenos <MessageCircle size={16}/></a>
+    <button className="menu-btn" onClick={() => setMenu(!menu)} aria-label="Abrir menú">{menu ? <X/> : <Menu/>}</button>
+  </header>
+}
+
+function SiteFooter({ internalPage = false }) {
+  return <footer><a className="brand brand-logo footer-logo" href={internalPage ? '/#inicio' : '#inicio'} aria-label="AutoEstudioCR Detailing, inicio"><img src="/autoestudiocr-logo.svg" alt="AutoEstudioCR Detailing"/></a><p>AutoEstudioCR Detailing es un proyecto costarricense de Josue Arce, dedicado al cuidado automotriz profesional.</p><div className="socials"><a href="mailto:hola@estudioauto.com" aria-label="Correo"><Mail/></a><a href="https://www.instagram.com/autoestudiocr" target="_blank" rel="noreferrer" aria-label="Instagram de AutoEstudioCR"><Instagram/></a><a href={whatsappHref()} target="_blank" rel="noreferrer" onClick={whatsappClick(internalPage ? 'thank_you_footer' : 'footer')} aria-label="WhatsApp de AutoEstudioCR"><MessageCircle/></a></div><small>© 2026 AutoEstudioCR Detailing · Costa Rica · Aviso de privacidad</small></footer>
+}
+
+function ThankYouPage() {
+  const [menu, setMenu] = useState(false)
+  useEffect(() => {
+    const robots = document.querySelector('meta[name="robots"]')
+    const previousRobots = robots?.content
+    const previousTitle = document.title
+    if (robots) robots.content = 'noindex,nofollow'
+    document.title = 'Gracias por contactarnos | AutoEstudioCR'
+    return () => { if (robots && previousRobots) robots.content = previousRobots; document.title = previousTitle }
+  }, [])
+
+  return <div className="thank-you-page">
+    <SiteHeader menu={menu} setMenu={setMenu} internalPage/>
+    <main className="thank-you-main">
+      <section className="thank-you-card">
+        <span className="kicker">SOLICITUD RECIBIDA</span>
+        <h1>¡Gracias por <em>contactarnos!</em></h1>
+        <p>Recibimos tu solicitud. Te responderemos lo antes posible.</p>
+        <div className="thank-you-actions"><a className="btn" href="/">Volver al inicio</a><a className="thank-you-whatsapp" href={whatsappHref()} target="_blank" rel="noreferrer" onClick={whatsappClick('thank_you_page')}>Abrir WhatsApp <MessageCircle size={18}/></a></div>
+      </section>
+    </main>
+    <SiteFooter internalPage/>
+  </div>
+}
+
+function HomePage() {
   const [menu, setMenu] = useState(false)
   const [adminLoginOpen, setAdminLoginOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
@@ -30,15 +74,7 @@ function App() {
   const openAdmin = () => { setAdminLoginOpen(false); setAdminOpen(true) }
 
   return <>
-    <header className="header">
-      <a className="brand brand-logo" href="#inicio" aria-label="AutoEstudioCR Detailing, inicio"><img src="/autoestudiocr-header-logo.svg" alt="AutoEstudioCR Detailing"/></a>
-      <nav className={menu ? 'nav open' : 'nav'} aria-label="Navegación principal">
-        <a href="#servicios" onClick={() => setMenu(false)}>Servicios</a><a href="#galeria" onClick={() => setMenu(false)}>Resultados</a><a href="#proceso" onClick={() => setMenu(false)}>Proceso</a><a href="#opiniones" onClick={() => setMenu(false)}>Opiniones</a>
-        <button className="admin-link" onClick={() => { setAdminLoginOpen(true); setMenu(false) }}>Administrar</button>
-      </nav>
-      <a className="btn btn-small desktop-cta" href={whatsappHref()} target="_blank" rel="noreferrer">Contáctenos <MessageCircle size={16}/></a>
-      <button className="menu-btn" onClick={() => setMenu(!menu)} aria-label="Abrir menú">{menu ? <X/> : <Menu/>}</button>
-    </header>
+    <SiteHeader menu={menu} setMenu={setMenu} openAdmin={() => { setAdminLoginOpen(true); setMenu(false) }}/>
 
     <main>
       <section className="hero" id="inicio">
@@ -47,7 +83,7 @@ function App() {
           <div className="eyebrow"><span/> Detallado automotriz de precisión</div>
           <h1>No solo lo lavamos.<br/><em>Lo restauramos.</em></h1>
           <p>Conoce nuestros servicios y resultados. Cada vehículo recibe una valoración personalizada según su tamaño, condición y el acabado que buscas.</p>
-          <div className="hero-actions"><a className="btn" href={whatsappHref()} target="_blank" rel="noreferrer">Consultar por WhatsApp <MessageCircle size={18}/></a><a className="text-link" href="#galeria">Ver resultados <ChevronRight size={17}/></a></div>
+          <div className="hero-actions"><a className="btn" href={whatsappHref()} target="_blank" rel="noreferrer" onClick={whatsappClick('hero')}>Consultar por WhatsApp <MessageCircle size={18}/></a><a className="text-link" href="#galeria">Ver resultados <ChevronRight size={17}/></a></div>
           <div className="trust-row">{reviews.total > 0 && <><div><strong>{reviews.total}</strong><small>{reviews.total === 1 ? 'Opinión en Google' : 'Opiniones en Google'}</small></div><i/></>}<div><strong>100%</strong><small>Productos profesionales</small></div><i/><div><strong>1 a 5 años</strong><small>Protección cerámica disponible</small></div></div>
         </div>
         <div className="scroll-cue">DESCUBRE <span/></div>
@@ -55,13 +91,13 @@ function App() {
 
       <section className="section catalog-section" id="servicios">
         <div className="section-head"><div><span className="kicker">SERVICIOS AUTOESTUDIOCR</span><h2>{catalog.website.servicesSection.title}<br/><em>para cada nivel de detalle.</em></h2></div><p>{catalog.website.servicesSection.subtitle} Cotizamos cada trabajo después de conocer el vehículo.</p></div>
-        <div className="catalog-grid">{catalog.services.map(service => <ServiceCard key={service.id} service={service} contactHref={whatsappHref(service.name)}/>)}</div>
+        <div className="catalog-grid">{catalog.services.map(service => <ServiceCard key={service.id} service={service} contactHref={whatsappHref(service.name)} onContact={whatsappClick(`service_${service.id}`)}/>)}</div>
       </section>
 
       <section className="section addons-section" id="adicionales">
         <div className="section-head"><div><span className="kicker">SERVICIOS ADICIONALES</span><h2>{catalog.additionalServices.subtitle}<br/><em>cada detalle.</em></h2></div><p>{catalog.additionalServices.note}</p></div>
-        <div className="addons-grid">{catalog.additionalServices.items.map(addon => <AddOn key={addon.id} addon={addon} contactHref={whatsappHref(addon.name)}/>)}</div>
-        <div className="services-cta"><h3>¿Quieres saber cuál servicio necesita tu vehículo?</h3><a className="btn" href={whatsappHref()} target="_blank" rel="noreferrer"><MessageCircle/> Hablar con Josue</a></div>
+        <div className="addons-grid">{catalog.additionalServices.items.map(addon => <AddOn key={addon.id} addon={addon} contactHref={whatsappHref(addon.name)} onContact={whatsappClick(`addon_${addon.id}`)}/>)}</div>
+        <div className="services-cta"><h3>¿Quieres saber cuál servicio necesita tu vehículo?</h3><a className="btn" href={whatsappHref()} target="_blank" rel="noreferrer" onClick={whatsappClick('services_cta')}><MessageCircle/> Hablar con Josue</a></div>
       </section>
 
       <section className="section products" id="productos"><div className="section-head"><div><span className="kicker">PRODUCTOS PROFESIONALES</span><h2>Resultados respaldados por<br/><em>una marca líder.</em></h2></div><p>Utilizamos productos profesionales Meguiar&apos;s seleccionados según la superficie y condición de cada vehículo.</p></div><div className="product-grid product-grid-single"><article><span>PRO SERIES</span><h3>MEGUIAR&apos;S</h3><p>Pulimentos, limpieza, protección y acabado profesional</p><ShieldCheck/></article></div></section>
@@ -73,15 +109,19 @@ function App() {
       <section className="testimonial" id="opiniones"><div className="reviews-wrap"><span className="kicker">OPINIONES EN GOOGLE</span><h2>Experiencias que generan <em>confianza.</em></h2>{reviewsLoading ? <p className="reviews-status" role="status">Cargando opiniones…</p> : reviews.reviews.length ? <><div className="reviews-summary" aria-label={`${reviews.rating} de 5 estrellas, ${reviews.total} opiniones en Google`}><strong>{reviews.rating.toLocaleString('es-CR', { maximumFractionDigits: 1 })}</strong><span aria-hidden="true">★★★★★</span><small>{reviews.total} {reviews.total === 1 ? 'opinión' : 'opiniones'} en Google</small></div><div className="reviews-grid">{reviews.reviews.map(review => <article className="review-card" key={review.id}><div className="review-stars" aria-label={`${review.rating} de 5 estrellas`}>{'★'.repeat(Math.max(0, Math.min(5, Math.round(Number(review.rating) || 0))))}</div><blockquote>“{review.text}”</blockquote><p><strong>{review.author}</strong><span>{review.relativeTime}</span></p></article>)}</div>{reviews.googleMapsUrl && <a className="btn review-link" href={reviews.googleMapsUrl} target="_blank" rel="noreferrer">Ver todas en Google <ArrowRight size={17}/></a>}</> : <p className="reviews-status">Muy pronto compartiremos aquí las opiniones publicadas por nuestros clientes en Google.</p>}</div></section>
 
       <section className="section owner-section"><div className="owner-card"><span className="kicker">HECHO EN COSTA RICA</span><h2>Pasión por cada detalle.</h2><p>Soy <strong>Josue Arce</strong> y creé este estudio para ofrecer en Costa Rica un cuidado automotriz honesto, preciso y de nivel profesional.</p><span className="owner-signature">Josue Arce · Fundador</span></div></section>
-      <section className="cta-section"><div><span className="kicker">TU AUTO LO MERECE</span><h2>Hablemos sobre<br/><em>lo que tu vehículo necesita.</em></h2><p>Envíanos fotografías o tus preguntas y recibe atención personalizada.</p><a className="btn" href={whatsappHref()} target="_blank" rel="noreferrer">Contáctenos por WhatsApp <MessageCircle size={18}/></a></div></section>
+      <section className="cta-section"><div><span className="kicker">TU AUTO LO MERECE</span><h2>Hablemos sobre<br/><em>lo que tu vehículo necesita.</em></h2><p>Envíanos fotografías o tus preguntas y recibe atención personalizada.</p><a className="btn" href={whatsappHref()} target="_blank" rel="noreferrer" onClick={whatsappClick('final_cta')}>Contáctenos por WhatsApp <MessageCircle size={18}/></a></div></section>
     </main>
 
-    <a className="whatsapp-float" href={whatsappHref()} target="_blank" rel="noreferrer" aria-label="Contactar a AutoEstudioCR por WhatsApp"><MessageCircle/><span><strong>Contáctenos</strong><small>Atención por WhatsApp</small></span></a>
-    <footer><a className="brand brand-logo footer-logo" href="#inicio" aria-label="AutoEstudioCR Detailing, inicio"><img src="/autoestudiocr-logo.svg" alt="AutoEstudioCR Detailing"/></a><p>AutoEstudioCR Detailing es un proyecto costarricense de Josue Arce, dedicado al cuidado automotriz profesional.</p><div className="socials"><a href="mailto:hola@estudioauto.com" aria-label="Correo"><Mail/></a><a href="https://www.instagram.com/autoestudiocr" target="_blank" rel="noreferrer" aria-label="Instagram de AutoEstudioCR"><Instagram/></a><a href={whatsappHref()} target="_blank" rel="noreferrer" aria-label="WhatsApp de AutoEstudioCR"><MessageCircle/></a></div><small>© 2026 AutoEstudioCR Detailing · Costa Rica · Aviso de privacidad</small></footer>
+    <a className="whatsapp-float" href={whatsappHref()} target="_blank" rel="noreferrer" onClick={whatsappClick('floating_button')} aria-label="Contactar a AutoEstudioCR por WhatsApp"><MessageCircle/><span><strong>Contáctenos</strong><small>Atención por WhatsApp</small></span></a>
+    <SiteFooter/>
 
     {adminLoginOpen && <AdminLogin onClose={() => setAdminLoginOpen(false)} onSuccess={openAdmin}/>}
     {adminOpen && <AdminPortal projects={projects} setProjects={setProjects} onClose={() => setAdminOpen(false)}/>}
   </>
+}
+
+function App() {
+  return window.location.pathname.replace(/\/+$/, '') === '/gracias' ? <ThankYouPage/> : <HomePage/>
 }
 
 export default App

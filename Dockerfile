@@ -1,6 +1,8 @@
 # Etapa de compilación: instala dependencias, ejecuta pruebas y genera /dist.
 FROM node:22-alpine AS build
 WORKDIR /app
+ARG VITE_GA_MEASUREMENT_ID=""
+ENV VITE_GA_MEASUREMENT_ID=$VITE_GA_MEASUREMENT_ID
 COPY package*.json ./
 RUN npm ci --no-audit --no-fund
 
@@ -18,7 +20,9 @@ RUN PORT=8080 node server.js & pid=$!; \
        wget -q -O /tmp/header-logo.svg http://127.0.0.1:8080/autoestudiocr-header-logo.svg && \
        grep -q '<svg' /tmp/header-logo.svg && \
        wget -q -O /tmp/logo.svg http://127.0.0.1:8080/autoestudiocr-logo.svg && \
-       grep -q '<svg' /tmp/logo.svg; then kill "$pid"; wait "$pid" || true; exit 0; fi; \
+       grep -q '<svg' /tmp/logo.svg && \
+       wget -q -O /tmp/gracias.html http://127.0.0.1:8080/gracias && \
+       grep -q 'noindex,nofollow' /tmp/gracias.html; then kill "$pid"; wait "$pid" || true; exit 0; fi; \
     sleep 1; \
   done; \
   kill "$pid" 2>/dev/null || true; exit 1

@@ -75,6 +75,22 @@ unset ADMIN_PASSWORD SESSION_SECRET
 
 No uses la contraseña inicial en producción.
 
+## Google Analytics 4 y página de conversión
+
+La ruta pública `/gracias` está preparada como página de confirmación y devuelve `noindex,nofollow`. Actualmente el sitio no tiene un formulario comercial: abrir WhatsApp no redirige a esa ruta ni genera una visita falsa a la página de conversión.
+
+Para revisarla localmente ejecuta `npm run dev` y abre `http://localhost:5173/gracias`. Para validar la respuesta de producción usa `npm run build`, inicia `PORT=8080 npm start` y confirma con `curl -s http://localhost:8080/gracias | grep noindex,nofollow`.
+
+Todos los enlaces a WhatsApp emiten el evento GA4 `whatsapp_contact` con `page_location`, `button_location` y `contact_method`. Para enviarlo a una propiedad real necesitas crear un flujo web en GA4 y configurar su ID de medición `G-XXXXXXXXXX`:
+
+```bash
+# Desarrollo local
+printf 'VITE_GA_MEASUREMENT_ID="G-XXXXXXXXXX"\n' > .env.local
+npm run dev
+```
+
+En Cloud Build agrega la sustitución `_GA_MEASUREMENT_ID` al trigger con ese mismo valor. El Dockerfile lo incorpora al bundle durante la compilación; el ID es público y no debe guardarse en Secret Manager. Para probar DebugView abre `http://localhost:5173/?debug_analytics=1`, pulsa cualquier enlace de WhatsApp y busca `whatsapp_contact` en GA4.
+
 ## Google Reviews
 
 La interfaz consulta `/api/reviews`. La API key permanece en Secret Manager y nunca se envía al navegador:

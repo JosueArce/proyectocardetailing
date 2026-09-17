@@ -1,6 +1,6 @@
 steps:
   - name: gcr.io/cloud-builders/docker
-    args: ['build', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA', '.']
+    args: ['build', '--build-arg', 'VITE_GA_MEASUREMENT_ID=${_GA_MEASUREMENT_ID}', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA', '.']
   - name: gcr.io/cloud-builders/docker
     args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA']
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
@@ -27,5 +27,6 @@ substitutions:
   _REGION: us-west1
   _REPOSITORY: car-detailing
   _SERVICE: proyectocardetailing
+  _GA_MEASUREMENT_ID: ''
 options:
   logging: CLOUD_LOGGING_ONLY

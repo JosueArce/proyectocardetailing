@@ -16,7 +16,11 @@ const apiMock = async (url, options = {}) => {
 }
 
 beforeEach(() => vi.stubGlobal('fetch', vi.fn(apiMock)))
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  window.history.pushState({}, '', '/')
+  document.querySelectorAll('meta[name="robots"][data-test-created]').forEach(element => element.remove())
+})
 
 describe('sitio informativo de AutoEstudioCR', () => {
   it('muestra el catálogo sin precios, cuentas, carrito ni reservas', async () => {
@@ -44,6 +48,43 @@ describe('sitio informativo de AutoEstudioCR', () => {
     expect(within(packageCard).getByRole('link', { name: /consultar por whatsapp/i })).toHaveAttribute('href', expect.stringContaining('Lavado%20B%C3%A1sico'))
     expect(screen.getByRole('link', { name: /consultar por restauración de focos/i })).toHaveAttribute('href', expect.stringContaining('wa.me/50683629162'))
     expect(screen.getByRole('link', { name: 'Contactar a AutoEstudioCR por WhatsApp' })).toHaveAttribute('href', expect.stringContaining('wa.me/50683629162'))
+  })
+
+  it('registra todos los accesos a WhatsApp sin cambiar su destino', async () => {
+    const user = userEvent.setup()
+    const gtag = vi.fn()
+    vi.stubGlobal('gtag', gtag)
+    render(<App />)
+
+    const links = screen.getAllByRole('link').filter(link => link.href.includes('wa.me/50683629162'))
+    expect(links.length).toBeGreaterThan(5)
+    for (const link of links) await user.click(link)
+
+    expect(gtag).toHaveBeenCalledTimes(links.length)
+    expect(gtag).toHaveBeenCalledWith('event', 'whatsapp_contact', expect.objectContaining({
+      page_location: window.location.href,
+      button_location: expect.any(String),
+      contact_method: 'whatsapp',
+    }))
+  })
+
+  it('muestra /gracias con noindex sin convertir automáticamente un clic de WhatsApp', () => {
+    window.history.pushState({}, '', '/gracias')
+    const robots = document.createElement('meta')
+    robots.name = 'robots'
+    robots.content = 'index,follow,max-image-preview:large'
+    robots.dataset.testCreated = 'true'
+    document.head.append(robots)
+    const gtag = vi.fn()
+    vi.stubGlobal('gtag', gtag)
+
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: /gracias por contactarnos/i })).toBeInTheDocument()
+    expect(screen.getByText(/recibimos tu solicitud/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /volver al inicio/i })).toHaveAttribute('href', '/')
+    expect(robots).toHaveAttribute('content', 'noindex,nofollow')
+    expect(gtag).not.toHaveBeenCalled()
   })
 
   it('muestra opiniones reales recibidas desde Google Places', async () => {

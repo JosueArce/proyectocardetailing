@@ -207,7 +207,7 @@ app.post('/api/admin/projects', requireAdmin, async (request, response) => {
 
 app.get('/robots.txt', (request, response) => {
   const origin = process.env.PUBLIC_SITE_URL || `${request.protocol}://${request.get('host')}`
-  response.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${origin}/sitemap.xml\n`)
+  response.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /gracias\nSitemap: ${origin}/sitemap.xml\n`)
 })
 app.get('/sitemap.xml', (request, response) => {
   const origin = process.env.PUBLIC_SITE_URL || `${request.protocol}://${request.get('host')}`
@@ -218,6 +218,15 @@ app.get('/health', (_request, response) => response.type('text').send('ok'))
 const root = path.dirname(fileURLToPath(import.meta.url))
 const dist = path.join(root, 'dist')
 if (fs.existsSync(dist)) app.use(express.static(dist, { index: false }))
+app.get('/gracias', (_request, response) => {
+  const indexPath = path.join(dist, 'index.html')
+  if (!fs.existsSync(indexPath)) return response.status(503).type('text').send('Aplicación no compilada.')
+  const html = fs.readFileSync(indexPath, 'utf8').replace(
+    /<meta\s+name=["']robots["']\s+content=["'][^"']*["']\s*\/?\s*>/i,
+    '<meta name="robots" content="noindex,nofollow">',
+  )
+  return response.type('html').send(html)
+})
 app.get(/.*/, (_request, response) => response.sendFile(path.join(dist, 'index.html')))
 
 const server = app.listen(port, '0.0.0.0', () => console.log(JSON.stringify({ severity: 'INFO', message: `AutoEstudioCR escuchando en el puerto ${port}`, port, nodeEnv: process.env.NODE_ENV || 'development' })))
