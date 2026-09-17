@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, Car, ChevronRight, Instagram, Mail, Menu, MessageCircle, ShieldCheck, Sparkles, X } from './icons'
+import { ArrowRight, Car, ChevronRight, Instagram, Mail, Menu, MessageCircle, Sparkles, X } from './icons'
 import { AdminLogin, AdminPortal } from './PortalPanels'
 import { AddOn, ServiceCard } from './ServiceCatalog'
 import catalog from './serviceCatalogData'
@@ -9,6 +9,12 @@ const sampleProjects = [
   { id: 'demo-exterior', title: 'Renovación exterior', description: 'Lavado técnico, descontaminación y acabado brillante de la carrocería.', media: [{ type: 'image', url: 'https://images.unsplash.com/photo-1507136566006-cfc505b114fc?auto=format&fit=crop&w=1200&q=85' }] },
   { id: 'demo-pintura', title: 'Detalle de pintura', description: 'Pulido de carrocería para recuperar profundidad, reflejo y presencia.', media: [{ type: 'image', url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=900&q=85' }] },
   { id: 'demo-acabado', title: 'Acabado profesional', description: 'Protección final y revisión minuciosa antes de entregar el vehículo.', media: [{ type: 'image', url: 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?auto=format&fit=crop&w=900&q=85' }] },
+]
+const professionalProducts = [
+  { id: 'meguiars', name: "MEGUIAR'S", logo: "Meguiar's", description: 'Pulimentos, limpieza, protección y acabado profesional' },
+  { id: 'carpro', name: 'CARPRO', logo: 'CARPRO', description: 'Recubrimientos, descontaminación y protección avanzada' },
+  { id: 'lake-country', name: 'LAKE COUNTRY', logo: 'LAKE COUNTRY', description: 'Pads y sistemas profesionales para corrección de pintura' },
+  { id: 'koch-chemie', name: 'KOCH-CHEMIE', logo: 'KOCH-CHEMIE', description: 'Químicos, pulimentos y cuidado especializado de superficies' },
 ]
 const whatsappBase = 'https://wa.me/50683629162'
 const whatsappHref = subject => `${whatsappBase}?text=${encodeURIComponent(subject ? `Hola AutoEstudioCR, quiero consultar por ${subject}.` : 'Hola AutoEstudioCR, quiero información sobre sus servicios de detallado.')}`
@@ -100,7 +106,7 @@ function HomePage() {
         <div className="services-cta"><h3>¿Quieres saber cuál servicio necesita tu vehículo?</h3><a className="btn" href={whatsappHref()} target="_blank" rel="noreferrer" onClick={whatsappClick('services_cta')}><MessageCircle/> Hablar con Josue</a></div>
       </section>
 
-      <section className="section products" id="productos"><div className="section-head"><div><span className="kicker">PRODUCTOS PROFESIONALES</span><h2>Resultados respaldados por<br/><em>una marca líder.</em></h2></div><p>Utilizamos productos profesionales Meguiar&apos;s seleccionados según la superficie y condición de cada vehículo.</p></div><div className="product-grid product-grid-single"><article><span>PRO SERIES</span><h3>MEGUIAR&apos;S</h3><p>Pulimentos, limpieza, protección y acabado profesional</p><ShieldCheck/></article></div></section>
+      <section className="section products" id="productos"><div className="section-head"><div><span className="kicker">PRODUCTOS PROFESIONALES</span><h2>Resultados respaldados por<br/><em>marcas líderes.</em></h2></div><p>Seleccionamos productos profesionales según la superficie, condición y tratamiento que necesita cada vehículo.</p></div><div className="product-grid product-grid-brands">{professionalProducts.map(product => <article key={product.id}><span>PRO SERIES</span><div className={`product-logo product-logo-${product.id}`} role="img" aria-label={`Logo de ${product.name}`}>{product.logo}</div><h3>{product.name}</h3><p>{product.description}</p></article>)}</div></section>
 
       <section className="gallery-section" id="galeria"><div className="gallery-copy"><span className="kicker">RESULTADOS QUE HABLAN</span><h2>Trabajo real.<br/><em>Resultados reales.</em></h2><p>Explora fotografías y videos de proyectos realizados por AutoEstudioCR.</p></div><div className="gallery-grid">{projects.map(project => <article className="project-card" key={project.id}><div className="project-media">{project.media?.map((item, index) => item.type === 'video' ? <video aria-label={`${project.title}, video ${index + 1}`} controls preload="metadata" src={item.url} key={item.url}/> : <img src={item.url} alt={`${project.title}, fotografía ${index + 1}`} key={item.url}/>)}</div><div className="project-info"><span className="project-type">PROYECTO · {project.media?.length || 0} ARCHIVOS</span><h3>{project.title}</h3><p>{project.description}</p></div></article>)}</div></section>
 

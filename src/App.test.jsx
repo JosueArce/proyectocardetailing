@@ -31,6 +31,10 @@ describe('sitio informativo de AutoEstudioCR', () => {
     expect(screen.getByRole('heading', { name: 'Restauración de focos' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Análisis final y entrega del vehículo' })).toBeInTheDocument()
     expect(screen.getByText('1 a 5 años')).toBeInTheDocument()
+    for (const brand of ["MEGUIAR'S", 'CARPRO', 'LAKE COUNTRY', 'KOCH-CHEMIE']) {
+      expect(screen.getByRole('heading', { name: brand })).toBeInTheDocument()
+      expect(screen.getByRole('img', { name: `Logo de ${brand}` })).toBeInTheDocument()
+    }
     expect(container.querySelector('header.header .brand-logo img')).toHaveAttribute('src', '/autoestudiocr-header-logo.svg')
     expect(document.body).not.toHaveTextContent(/₡[0-9]/)
     expect(screen.queryByRole('button', { name: /reservar/i })).not.toBeInTheDocument()
