@@ -1,0 +1,6 @@
+{
+  "firestore": {
+    "rules": "GCP-infra/storage/firestore.rules",
+    "indexes": "GCP-infra/storage/firestore.indexes.json"
+  }
+}
